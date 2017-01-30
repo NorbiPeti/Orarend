@@ -9,7 +9,7 @@ namespace Orarend
     {
         public static IEnumerable<Óra> Órák(string csoportok)
         {
-
+            return null;
         }
     }
 }
