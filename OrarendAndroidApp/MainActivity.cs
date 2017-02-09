@@ -28,12 +28,23 @@ namespace OrarendAndroidApp
                     textview.SetTextColor(color);
                     tr1.AddView(textview);
                 };
-            foreach (var óra in API.Órák(""))
+            /*foreach (var óra in API.Órák(""))
             {
                 TableRow tr1 = new TableRow(this);
                 addCell(óra.Név + "\n" + óra.Tanár.Név + "\n" + óra.Terem, Color.White, tr1);
                 table.AddView(tr1);
-            }
+            }*/
+            TableRow tr = new TableRow(this);
+            API.Osztályok().ContinueWith(t =>
+            {
+                if (t.Exception.InnerExceptions.Count > 0)
+                    foreach (var ex in t.Exception.InnerExceptions)
+                        addCell(ex.ToString().Substring(0, 50), Color.Red, tr); //TODO: Handler, main thread
+                else
+                    foreach (var osztály in t.Result)
+                        addCell(osztály, Color.Aqua, tr);
+                table.AddView(tr);
+            });
         }
     }
 }
