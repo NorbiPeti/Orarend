@@ -13,6 +13,9 @@ namespace Orarend
         public Tanár Tanár { get; set; }
         public int Sorszám { get; set; }
         public string Terem { get; set; }
-        public string Csoport { get; set; }
+        /// <summary>
+        /// Az órán résztvevő csoportok, pluszjelekkel elválasztva
+        /// </summary>
+        public string Csoportok { get; set; }
     }
 }

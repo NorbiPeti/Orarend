@@ -8,7 +8,18 @@ namespace Orarend
 {
     public class Órarend
     {
-        public Dictionary<char, List<Óra>> Órák { get; set; }
+        /// <summary>
+        /// Egy 6x16 2D tömb, az első koordináta a nap indexe, a második az óráé
+        /// </summary>
+        public Óra[,] ÓrákAHét { get; } = new Óra[6, 16];
+        public Óra[,] ÓrákBHét { get; } = new Óra[6, 16];
         public string Név { get; set; }
+        public string OsztályID { get; set; }
+        public string OsztályNév { get; set; }
+        /// <summary>
+        /// Egy 16 elemű tömb az órák kezdő időpontjaival
+        /// </summary>
+        public TimeSpan[] Órakezdetek { get; } = new TimeSpan[16];
+        public List<string> Csoportok { get; }
     }
 }

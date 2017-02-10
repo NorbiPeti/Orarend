@@ -37,7 +37,7 @@ namespace OrarendAndroidApp
                 table.AddView(tr1);
             }*/
             TableRow tr = new TableRow(this);
-            API.Osztályok().ContinueWith(t =>
+            /*API.Osztályok().ContinueWith(t =>
             {
                 handler.Post(() =>
                 {
@@ -49,7 +49,8 @@ namespace OrarendAndroidApp
                             addCell(osztály[0], Color.Aqua, tr);
                     table.AddView(tr);
                 });
-            });
+            });*/
+            API.Frissítés();
         }
     }
 }

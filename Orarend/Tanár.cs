@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Orarend
 {
-    public class Tanár
+    public struct Tanár
     {
         public string Azonosító { get; set; }
         public string Név { get; set; }
