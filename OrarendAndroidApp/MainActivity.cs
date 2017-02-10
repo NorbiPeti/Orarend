@@ -15,11 +15,13 @@ namespace OrarendAndroidApp
     [Activity(Label = "OrarendAndroidApp", MainLauncher = true, Icon = "@drawable/icon")]
     public class MainActivity : Activity
     {
+        private Handler handler;
+
         protected override void OnCreate(Bundle bundle)
         {
             base.OnCreate(bundle);
             SetContentView(Resource.Layout.MainLayout);
-            //ViewPager viewPager = FindViewById<ViewPager>(Resource.Id.viewpager);
+            handler = new Handler();
             var table = FindViewById<TableLayout>(Resource.Id.tableLayout1);
             Action<string, Color, TableRow> addCell = (text, color, tr1) =>
                 {
@@ -37,13 +39,16 @@ namespace OrarendAndroidApp
             TableRow tr = new TableRow(this);
             API.Osztályok().ContinueWith(t =>
             {
-                if (t.Exception.InnerExceptions.Count > 0)
-                    foreach (var ex in t.Exception.InnerExceptions)
-                        addCell(ex.ToString().Substring(0, 50), Color.Red, tr); //TODO: Handler, main thread
-                else
-                    foreach (var osztály in t.Result)
-                        addCell(osztály, Color.Aqua, tr);
-                table.AddView(tr);
+                handler.Post(() =>
+                {
+                    if (t.Exception?.InnerExceptions.Count > 0)
+                        foreach (var ex in t.Exception.InnerExceptions)
+                            addCell(ex.ToString(), Color.Red, tr);
+                    else
+                        foreach (var osztály in t.Result)
+                            addCell(osztály[0], Color.Aqua, tr);
+                    table.AddView(tr);
+                });
             });
         }
     }
