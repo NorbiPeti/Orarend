@@ -30,27 +30,31 @@ namespace OrarendAndroidApp
                     textview.SetTextColor(color);
                     tr1.AddView(textview);
                 };
-            /*foreach (var óra in API.Órák(""))
-            {
-                TableRow tr1 = new TableRow(this);
-                addCell(óra.Név + "\n" + óra.Tanár.Név + "\n" + óra.Terem, Color.White, tr1);
-                table.AddView(tr1);
-            }*/
-            TableRow tr = new TableRow(this);
-            /*API.Osztályok().ContinueWith(t =>
+            API.Frissítés().ContinueWith(t =>
             {
                 handler.Post(() =>
                 {
                     if (t.Exception?.InnerExceptions.Count > 0)
+                    {
                         foreach (var ex in t.Exception.InnerExceptions)
+                        {
+                            TableRow tr = new TableRow(this);
                             addCell(ex.ToString(), Color.Red, tr);
+                            table.AddView(tr);
+                        }
+                    }
                     else
-                        foreach (var osztály in t.Result)
-                            addCell(osztály[0], Color.Aqua, tr);
-                    table.AddView(tr);
+                    {
+                        for (int j = 0; j < API.AktuálisÓrarend.ÓrákAHét.GetLength(1); j++)
+                        {
+                            TableRow tr = new TableRow(this);
+                            for (int i = 0; i < API.AktuálisÓrarend.ÓrákAHét.GetLength(0); i++)
+                                    addCell(API.AktuálisÓrarend.ÓrákAHét[i, j] != null ? API.AktuálisÓrarend.ÓrákAHét[i, j].Név : "", Color.Aqua, tr);
+                            table.AddView(tr);
+                        }
+                    }
                 });
-            });*/
-            API.Frissítés();
+            });
         }
     }
 }

@@ -9,9 +9,12 @@ namespace Orarend
     public class Órarend
     {
         /// <summary>
-        /// Egy 6x16 2D tömb, az első koordináta a nap indexe, a második az óráé
+        /// Egy 6x16 2D tömb, az első koordináta a nap indexe, a második az óráé. Az értékek lehetnek null-ok, ha nincs óra az adott időpontban
         /// </summary>
         public Óra[,] ÓrákAHét { get; } = new Óra[6, 16];
+        /// <summary>
+        /// Egy 6x16 2D tömb, az első koordináta a nap indexe, a második az óráé. Az értékek lehetnek null-ok, ha nincs óra az adott időpontban
+        /// </summary>
         public Óra[,] ÓrákBHét { get; } = new Óra[6, 16];
         public string Név { get; set; }
         public string OsztályID { get; set; }
