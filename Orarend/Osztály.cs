@@ -8,7 +8,10 @@ namespace Orarend
 {
     public class Osztály
     {
-        public string Azonosító { get; set; }
-        public string Név { get; set; }
+        public string Azonosító { get; internal set; }
+        public string Név { get; internal set; }
+        internal Osztály()
+        {
+        }
     }
 }

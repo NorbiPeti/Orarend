@@ -1,28 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
     android:minWidth="25px"
     android:minHeight="25px">
-    <TableLayout
-        android:id="@+id/tableLayout1"
-        android:layout_width="fill_parent"
-        android:layout_height="fill_parent"
-        android:stretchColumns="1"
-        android:scrollbars="horizontal">
-        <ProgressBar
-            style="@android:attr/progressBarStyleHorizontal"
-            android:id="@+id/progressBar1"
-            android:indeterminateTint="#00ffffff"
-            android:indeterminate="true"
-            android:indeterminateBehavior="repeat"
-            android:indeterminateOnly="true"
-            android:indeterminateTintMode="add"
-            android:visibility="gone" />
-        <ActionMenuView
-            android:minWidth="25px"
-            android:minHeight="25px"
-            android:id="@+id/actionMenuView1" />
-    </TableLayout>
+    <ScrollView
+        android:id="@+id/ScrollView01"
+        android:layout_height="match_parent"
+        android:scrollbars="horizontal|vertical"
+        android:layout_width="match_parent"
+        android:layout_marginTop="5dip"
+        android:scrollbarStyle="outsideInset"
+        android:fillViewport="true">
+        <HorizontalScrollView
+            android:id="@+id/horizontalView"
+            android:layout_height="wrap_content"
+            android:scrollbars="horizontal"
+            android:layout_width="wrap_content"
+            android:layout_marginTop="5dip">
+            <TableLayout
+                android:id="@+id/tableLayout1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:stretchColumns="1"
+                android:isScrollContainer="true">
+                <ProgressBar
+                    style="@android:attr/progressBarStyleHorizontal"
+                    android:id="@+id/progressBar1"
+                    android:indeterminateTint="#00ffffff"
+                    android:indeterminate="true"
+                    android:indeterminateBehavior="repeat"
+                    android:indeterminateOnly="true"
+                    android:indeterminateTintMode="add"
+                    android:visibility="gone" />
+                <ActionMenuView
+                    android:minWidth="25px"
+                    android:minHeight="25px"
+                    android:id="@+id/actionMenuView1" />
+            </TableLayout>
+        </HorizontalScrollView>
+    </ScrollView>
 </LinearLayout>

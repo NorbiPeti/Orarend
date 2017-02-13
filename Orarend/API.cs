@@ -73,9 +73,11 @@ namespace Orarend
                                                 continue;
                                             if (óra == null)
                                                 (ahét ? órarend.ÓrákAHét : órarend.ÓrákBHét)[i, x] = óra = new Óra();
-                                            var csoportok = óranode.FirstChild.InnerText.TrimEnd(':');
+                                            var csoport = óranode.FirstChild.InnerText.TrimEnd(':');
+                                            if (csoport != "Egész osztály" && !órarend.Csoportok.Contains(csoport))
+                                                continue;
                                             óra.Sorszám = x + 1;
-                                            óra.Csoportok = new string[] { csoportok }; //Az állandó órarendben osztályonként csak egy csoport van egy órán
+                                            óra.Csoportok = new string[] { csoport }; //Az állandó órarendben osztályonként csak egy csoport van egy órán
                                             óra.Azonosító = óranode.ChildNodes[2].InnerText;
                                             óra.TeljesNév = óranode.ChildNodes[2].Attributes["title"].Value;
                                             óra.Terem = óranode.ChildNodes[3].InnerText.Trim(' ', '(', ')');
@@ -99,7 +101,7 @@ namespace Orarend
         /// </summary>
         public static async Task HelyettesítésFrissítés()
         {
-
+            //TODO
         }
     }
 }
