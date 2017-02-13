@@ -9,5 +9,20 @@
         android:id="@+id/tableLayout1"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
-        android:stretchColumns="1" />
+        android:stretchColumns="1"
+        android:scrollbars="horizontal">
+        <ProgressBar
+            style="@android:attr/progressBarStyleHorizontal"
+            android:id="@+id/progressBar1"
+            android:indeterminateTint="#00ffffff"
+            android:indeterminate="true"
+            android:indeterminateBehavior="repeat"
+            android:indeterminateOnly="true"
+            android:indeterminateTintMode="add"
+            android:visibility="gone" />
+        <ActionMenuView
+            android:minWidth="25px"
+            android:minHeight="25px"
+            android:id="@+id/actionMenuView1" />
+    </TableLayout>
 </LinearLayout>

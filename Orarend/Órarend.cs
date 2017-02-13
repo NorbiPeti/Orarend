@@ -17,8 +17,7 @@ namespace Orarend
         /// </summary>
         public Óra[,] ÓrákBHét { get; } = new Óra[6, 16];
         public string Név { get; set; }
-        public string OsztályID { get; set; }
-        public string OsztályNév { get; set; }
+        public Osztály Osztály { get; set; }
         /// <summary>
         /// Egy 16 elemű tömb az órák kezdő időpontjaival
         /// </summary>

@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+  <item
+       android:id="@+id/menu_refresh"
+       android:icon="@drawable/ic_autorenew_black_24dp"
+       android:showAsAction="ifRoom"
+       android:title="Frissítés" />
+  <item
+       android:id="@+id/menu_add"
+       android:icon="@drawable/ic_add_black_24dp"
+       android:showAsAction="ifRoom"
+       android:title="Hozzáadás" />
+  <item
+       android:id="@+id/menu_edit"
+       android:icon="@drawable/ic_create_black_24dp"
+       android:showAsAction="ifRoom"
+       android:title="Szerkesztés" />
+  <item
+       android:id="@+id/menu_preferences"
+       android:icon="@drawable/ic_settings_black_24dp"
+       android:showAsAction="ifRoom"
+       android:title="Beállítások" />
+  <item
+       android:id="@+id/menu_fullrefresh"
+       android:showAsAction="never"
+       android:title="Teljes frissítés" />
+</menu>
