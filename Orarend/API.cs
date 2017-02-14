@@ -71,11 +71,11 @@ namespace Orarend
                                             var óra = (ahét ? órarend.ÓrákAHét : órarend.ÓrákBHét)[i, x];
                                             if (óranode.ChildNodes.Count == 0)
                                                 continue;
-                                            if (óra == null)
-                                                (ahét ? órarend.ÓrákAHét : órarend.ÓrákBHét)[i, x] = óra = new Óra();
                                             var csoport = óranode.FirstChild.InnerText.TrimEnd(':');
                                             if (csoport != "Egész osztály" && !órarend.Csoportok.Contains(csoport))
                                                 continue;
+                                            if (óra == null)
+                                                (ahét ? órarend.ÓrákAHét : órarend.ÓrákBHét)[i, x] = óra = new Óra();
                                             óra.Sorszám = x + 1;
                                             óra.Csoportok = new string[] { csoport }; //Az állandó órarendben osztályonként csak egy csoport van egy órán
                                             óra.Azonosító = óranode.ChildNodes[2].InnerText;
