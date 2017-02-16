@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.Serialization.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -19,6 +20,7 @@ namespace Orarend
         /// <returns></returns>
         public static Osztály[] Osztályok { get; private set; }
         public static List<Órarend> Órarendek { get; } = new List<Órarend>();
+        public static Settings Beállítások { get; private set; } //TODO: Settings
         /// <summary>
         /// Frissíti az osztálylistát és az eredeti órarendet, első megnyitásnál, és egy órarend hozzáadásánál/szerkesztésénél, majd hetente elegendő meghívni
         /// </summary>
@@ -101,7 +103,68 @@ namespace Orarend
         /// </summary>
         public static async Task HelyettesítésFrissítés()
         {
-            //TODO
+            HtmlDocument doc = new HtmlDocument();
+            var req = WebRequest.CreateHttp("http://deri.enaplo.net/ajax/print/htlista.php");
+            var resp = await req.GetResponseAsync();
+            await Task.Run(() =>
+            {
+                using (var sr = new StreamReader(resp.GetResponseStream()))
+                    doc.LoadHtml(sr.ReadToEnd());
+            });
+        }
+
+        public static void ÓrarendBetöltés(Stream s)
+        {
+            using (s)
+            {
+                var serializer = new DataContractJsonSerializer(typeof(Órarend[]));
+                Órarendek.AddRange((Órarend[])serializer.ReadObject(s));
+            }
+        }
+
+        public static void OsztályBetöltés(Stream s)
+        {
+            using (s)
+            {
+                var serializer = new DataContractJsonSerializer(typeof(Osztály[]));
+                Osztályok = ((Osztály[])serializer.ReadObject(s));
+            }
+        }
+
+        public static void BeállításBetöltés(Stream s)
+        {
+            using (s)
+            {
+                var serializer = new DataContractJsonSerializer(typeof(Settings));
+                Beállítások = ((Settings)serializer.ReadObject(s));
+            }
+        }
+
+        public static void ÓrarendMentés(Stream s)
+        {
+            using (s)
+            {
+                var serializer = new DataContractJsonSerializer(typeof(Órarend[]));
+                serializer.WriteObject(s, Órarendek);
+            }
+        }
+
+        public static void OsztályMentés(Stream s)
+        {
+            using (s)
+            {
+                var serializer = new DataContractJsonSerializer(typeof(Osztály[]));
+                serializer.WriteObject(s, Osztályok);
+            }
+        }
+
+        public static void BeállításMentés(Stream s)
+        {
+            using (s)
+            {
+                var serializer = new DataContractJsonSerializer(typeof(Settings));
+                serializer.WriteObject(s, Beállítások);
+            }
         }
     }
 }

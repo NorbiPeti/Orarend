@@ -12,6 +12,7 @@ using Java.Lang;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Threading;
+using System.IO;
 
 namespace OrarendAndroidApp
 {
@@ -20,12 +21,19 @@ namespace OrarendAndroidApp
     {
         private Handler handler;
         private Órarend órarend;
-
+        
         protected override void OnCreate(Bundle bundle)
         {
             base.OnCreate(bundle);
             SetContentView(Resource.Layout.MainLayout);
             handler = new Handler();
+            string[] list = FileList();
+            if (list.Contains("beallitasok"))
+                API.BeállításBetöltés(OpenFileInput("beallitasok"));
+            if (list.Contains("orarend"))
+                API.ÓrarendBetöltés(OpenFileInput("orarend"));
+            if (list.Contains("osztaly"))
+                API.OsztályBetöltés(OpenFileInput("osztaly"));
             API.Frissítés().ContinueWith(t =>
             {
                 handler.Post(() =>
@@ -55,7 +63,7 @@ namespace OrarendAndroidApp
                 tr1.AddView(textview);
             };
             API.HelyettesítésFrissítés().ContinueWith(t =>
-            {
+            { //TODO: Ezt ne itt, ne így
                 handler.Post(() =>
                 {
                     TaskHiba(t);
@@ -95,7 +103,7 @@ namespace OrarendAndroidApp
                         }
                     }
                 });
-            });
+            }); //TODO: Tárolja el a helyettesített órarendeket is valahogyan, akár külön osztály, hogy csak a változásokat tárolja
         }
 
         private TextView selected;
@@ -157,6 +165,8 @@ namespace OrarendAndroidApp
                         handler.Post(() => bar.Visibility = ViewStates.Visible);
                         API.Frissítés().ContinueWith(t => //TODO: Megjelenítés frissítése
                         {
+                            API.ÓrarendMentés(OpenFileOutput("orarend", FileCreationMode.Private));
+                            API.OsztályMentés(OpenFileOutput("osztaly", FileCreationMode.Private)); //TODO: Beállítások mentése
                             handler.Post(() => bar.Visibility = ViewStates.Gone);
                         });
                         break;
