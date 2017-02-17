@@ -26,6 +26,8 @@ namespace OrarendAndroidApp
         {
             base.OnCreate(bundle);
             SetContentView(Resource.Layout.MainLayout);
+            ActionBar.SetDisplayShowTitleEnabled(false);
+            ActionBar.CustomView = FindViewById<Spinner>(Resource.Id.spinner);
             handler = new Handler();
             string[] list = FileList();
             if (list.Contains("beallitasok"))
@@ -34,56 +36,55 @@ namespace OrarendAndroidApp
                 API.ÓrarendBetöltés(OpenFileInput("orarend"));
             if (list.Contains("osztaly"))
                 API.OsztályBetöltés(OpenFileInput("osztaly"));
-            API.Frissítés().ContinueWith(t =>
-            {
-                handler.Post(() =>
-                {
-                    TaskHiba(t);
-                });
-                órarend = new Órarend("Teszt", API.Osztályok.First(), "gy1");
-                API.Órarendek.Add(órarend);
-                API.Frissítés().ContinueWith(tt => HelyettesítésFrissítés());
-            });
+            if (list.Contains("osztaly"))
+                API.OsztályBetöltés(OpenFileInput("osztaly"));
+            if (API.Osztályok == null || API.Osztályok.Length == 0)
+                ÓrarendFrissítés();
             var timer = new Timer(CsengőTimer, null, TimeSpan.Zero, new TimeSpan(0, 0, 1));
+        }
+
+        private void addCell(string text, Color color, TableRow tr1, bool clickable = false, int[] tag = null)
+        {
+            TextView textview = new TextView(this);
+            textview.SetText(text, TextView.BufferType.Normal);
+            textview.SetTextColor(color);
+            textview.SetPadding(10, 10, 10, 10);
+            textview.SetBackgroundResource(Resource.Drawable.cell_shape_light);
+            textview.Tag = tag;
+            if (textview.Clickable = clickable)
+                textview.Click += ÓraClick;
+            tr1.AddView(textview);
         }
 
         private void HelyettesítésFrissítés()
         {
-            var table = FindViewById<TableLayout>(Resource.Id.tableLayout1);
-            Action<string, Color, TableRow, bool, int[]> addCell = (text, color, tr1, clickable, tag) =>
-            {
-                TextView textview = new TextView(this);
-                textview.SetText(text, TextView.BufferType.Normal);
-                textview.SetTextColor(color);
-                textview.SetPadding(10, 10, 10, 10);
-                textview.SetBackgroundResource(Resource.Drawable.cell_shape_light);
-                textview.Tag = tag;
-                if (textview.Clickable = clickable)
-                    textview.Click += ÓraClick;
-                tr1.AddView(textview);
-            };
             API.HelyettesítésFrissítés().ContinueWith(t =>
             { //TODO: Ezt ne itt, ne így
+            }); //TODO: Tárolja el a helyettesített órarendeket is valahogyan, akár külön osztály, hogy csak a változásokat tárolja
+        }
+
+        private void ÓrarendFrissítés()
+        { //TODO: Meghívni minden tervezett alkalommal; hozzáadásnál csak a hozzáadott órarendet frissítse
+            API.Frissítés(OpenFileOutput("orarend", FileCreationMode.Private)).ContinueWith(t =>
+            {
                 handler.Post(() =>
                 {
-                    TaskHiba(t);
+                    if(TaskHiba(t))
                     {
+                        var table = FindViewById<TableLayout>(Resource.Id.tableLayout1);
+                        table.RemoveViews(0, table.ChildCount); //TODO: Test
                         TableRow tr = new TableRow(this);
-                        addCell("", Color.Black, tr, false, null);
-                        addCell("Hétfő", Color.Black, tr, false, null);
-                        addCell("Kedd", Color.Black, tr, false, null);
-                        addCell("Szerda", Color.Black, tr, false, null);
-                        addCell("Csütörtök", Color.Black, tr, false, null);
-                        addCell("Péntek", Color.Black, tr, false, null);
-                        addCell("Szombat", Color.Black, tr, false, null);
+                        addCell("", Color.Black, tr);
+                        addCell("Hétfő", Color.Black, tr);
+                        addCell("Kedd", Color.Black, tr);
+                        addCell("Szerda", Color.Black, tr);
+                        addCell("Csütörtök", Color.Black, tr);
+                        addCell("Péntek", Color.Black, tr);
+                        addCell("Szombat", Color.Black, tr);
                         table.AddView(tr, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WrapContent, ViewGroup.LayoutParams.WrapContent));
-
-                    }
-                    if ((t.Exception?.InnerExceptions?.Count ?? 0) == 0)
-                    {
                         for (int j = 0; j < órarend.ÓrákAHét.GetLength(1); j++)
                         {
-                            TableRow tr = new TableRow(this);
+                            tr = new TableRow(this);
                             bool notnull = false;
                             for (int i = 0; i < órarend.ÓrákAHét.GetLength(0); i++)
                             { //Kihagyja az üres sorokat
@@ -95,7 +96,7 @@ namespace OrarendAndroidApp
                             }
                             if (notnull)
                             {
-                                addCell((j + 1).ToString(), Color.Black, tr, false, null);
+                                addCell((j + 1).ToString(), Color.Black, tr);
                                 for (int i = 0; i < órarend.ÓrákAHét.GetLength(0); i++)
                                     addCell(órarend.ÓrákAHét[i, j] != null ? órarend.ÓrákAHét[i, j].EgyediNév : "", Color.Black, tr, true, new int[2] { i, j });
                                 table.AddView(tr, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WrapContent, ViewGroup.LayoutParams.WrapContent));
@@ -103,7 +104,7 @@ namespace OrarendAndroidApp
                         }
                     }
                 });
-            }); //TODO: Tárolja el a helyettesített órarendeket is valahogyan, akár külön osztály, hogy csak a változásokat tárolja
+            });
         }
 
         private TextView selected;
@@ -180,10 +181,20 @@ namespace OrarendAndroidApp
             new AlertDialog.Builder(this).SetMessage(msg).SetNeutralButton("OK", (s, e) => { ((AlertDialog)s).Dismiss(); ((AlertDialog)s).Dispose(); }).SetTitle("Hiba").Show();
         }
 
-        private void TaskHiba(Task t)
+        /// <summary>
+        /// Az összes hibát kiírja, ami a <see cref="Task"/> futása közben keletkezett
+        /// </summary>
+        /// <param name="t"></param>
+        /// <returns>Igaz, ha nem volt hiba</returns>
+        private bool TaskHiba(Task t)
         {
+            bool ret = true;
             foreach (var ex in (IEnumerable<System.Exception>)t.Exception?.InnerExceptions ?? new System.Exception[0])
+            {
                 Hiba(ex.ToString());
+                ret = false;
+            }
+            return ret;
         }
 
         private void CsengőTimer(object state)

@@ -10,7 +10,6 @@ namespace Orarend
     {
         private ÓraTípus Típus { get; set; }
         public Tanár Tanár { get; set; }
-        public int Sorszám { get; set; }
         public string Terem { get; set; }
         /// <summary>
         /// Az órán résztvevő csoportok
@@ -58,6 +57,20 @@ namespace Orarend
                     throw new InvalidOperationException("Az azonosító nincs beállítva!");
                 Típus.EgyediNév = value;
             }
+        }
+
+        public bool VanEgyediNév
+        {
+            get
+            {
+                return Típus?.EgyediNév == null;
+            }
+        }
+
+        public void EgyediNévTörlése()
+        {
+            if (Típus != null)
+                Típus.EgyediNév = null;
         }
     }
 }

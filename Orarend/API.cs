@@ -20,11 +20,13 @@ namespace Orarend
         /// <returns></returns>
         public static Osztály[] Osztályok { get; private set; }
         public static List<Órarend> Órarendek { get; } = new List<Órarend>();
-        public static Settings Beállítások { get; private set; } //TODO: Settings
+        public static Settings Beállítások { get; private set; } = new Settings();
+        public static List<Helyettesítés> Helyettesítések { get; } = new List<Helyettesítés>();
         /// <summary>
         /// Frissíti az osztálylistát és az eredeti órarendet, első megnyitásnál, és egy órarend hozzáadásánál/szerkesztésénél, majd hetente elegendő meghívni
+        /// <param name="s">A file stream, ahova mentse az adatokat, hogy ne kelljen külön meghívni</param>
         /// </summary>
-        public static async Task Frissítés()
+        public static async Task Frissítés(Stream s)
         {
             Func<string, Task<HtmlDocument>> load = async (url) =>
             {
@@ -52,6 +54,7 @@ namespace Orarend
                 var doc = await load("http://deri.enaplo.net/ajax/orarend/orarendoszt.php?p=" + Uri.EscapeDataString(órarend.Osztály.Azonosító));
                 await Task.Run(() =>
                     {
+                        Osztályok = doc.GetElementbyId("uok").ChildNodes.Where(node => node.HasAttributes).Select(node => new Osztály { Azonosító = node.GetAttributeValue("value", ""), Név = node.NextSibling.InnerText }).ToArray();
                         bool ahét = true;
                         foreach (var node in doc.GetElementbyId("oda").FirstChild.FirstChild.ChildNodes[1].ChildNodes)
                         {
@@ -68,8 +71,8 @@ namespace Orarend
                                         int x = int.Parse(node.FirstChild.InnerText) - 1;
                                         órarend.Órakezdetek[x] = TimeSpan.Parse(node.FirstChild.Attributes["title"].Value.Split('-')[0].Trim());
                                         for (int i = 0; i < 5; i++) //Napok
-                                            { //TODO: for ciklus az egy időben tartott órákhoz
-                                                var óranode = node.ChildNodes[i + 1].FirstChild;
+                                        { //TODO: for ciklus az egy időben tartott órákhoz
+                                            var óranode = node.ChildNodes[i + 1].FirstChild;
                                             var óra = (ahét ? órarend.ÓrákAHét : órarend.ÓrákBHét)[i, x];
                                             if (óranode.ChildNodes.Count == 0)
                                                 continue;
@@ -78,7 +81,6 @@ namespace Orarend
                                                 continue;
                                             if (óra == null)
                                                 (ahét ? órarend.ÓrákAHét : órarend.ÓrákBHét)[i, x] = óra = new Óra();
-                                            óra.Sorszám = x + 1;
                                             óra.Csoportok = new string[] { csoport }; //Az állandó órarendben osztályonként csak egy csoport van egy órán
                                             óra.Azonosító = óranode.ChildNodes[2].InnerText;
                                             óra.TeljesNév = óranode.ChildNodes[2].Attributes["title"].Value;
@@ -93,15 +95,18 @@ namespace Orarend
                                     }
                             }
                         }
+                        ÓrarendMentés(s);
+                        OsztályMentés(s);
+                        Thread.Sleep(10);
                     });
-                Thread.Sleep(10);
             }
         }
 
         /// <summary>
         /// Frissíti a helyettesítéseket, naponta, indításkor vagy gombnyommásra frissítse (minden nap az első előtérbe kerüléskor)
+        /// <param name="s">A file stream, ahova mentse az adatokat, hogy ne kelljen külön meghívni</param>
         /// </summary>
-        public static async Task HelyettesítésFrissítés()
+        public static async Task HelyettesítésFrissítés(Stream s)
         {
             HtmlDocument doc = new HtmlDocument();
             var req = WebRequest.CreateHttp("http://deri.enaplo.net/ajax/print/htlista.php");
@@ -110,7 +115,7 @@ namespace Orarend
             {
                 using (var sr = new StreamReader(resp.GetResponseStream()))
                     doc.LoadHtml(sr.ReadToEnd());
-            });
+            }); //TODO
         }
 
         public static void ÓrarendBetöltés(Stream s)
@@ -140,7 +145,16 @@ namespace Orarend
             }
         }
 
-        public static void ÓrarendMentés(Stream s)
+        public static void HelyettesítésBetöltés(Stream s)
+        {
+            using (s)
+            {
+                var serializer = new DataContractJsonSerializer(typeof(Helyettesítés[])); //TODO: Tényleges órarendből állapítsa meg azt is, hogyha egyáltalán nincs ott egy óra, és máshol sincs, és ezt írja ki
+                Helyettesítések.AddRange((Helyettesítés[])serializer.ReadObject(s));
+            }
+        }
+
+        private static void ÓrarendMentés(Stream s)
         {
             using (s)
             {
@@ -149,7 +163,7 @@ namespace Orarend
             }
         }
 
-        public static void OsztályMentés(Stream s)
+        private static void OsztályMentés(Stream s)
         {
             using (s)
             {
@@ -164,6 +178,15 @@ namespace Orarend
             {
                 var serializer = new DataContractJsonSerializer(typeof(Settings));
                 serializer.WriteObject(s, Beállítások);
+            }
+        }
+
+        private static void HelyettesítésMentés(Stream s)
+        {
+            using (s)
+            {
+                var serializer = new DataContractJsonSerializer(typeof(Helyettesítés[]));
+                serializer.WriteObject(s, Helyettesítések);
             }
         }
     }

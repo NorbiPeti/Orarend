@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 
 namespace Orarend
 {
@@ -12,6 +8,9 @@ namespace Orarend
         public string Azonosító { get; set; }
         public string EgyediNév { get; set; }
 
+        /// <summary>
+        /// A kulcs az óra azonosítója
+        /// </summary>
         public static Dictionary<string, ÓraTípus> Típusok { get; } = new Dictionary<string, ÓraTípus>();
     }
 }
