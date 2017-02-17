@@ -24,9 +24,10 @@ namespace Orarend
         public static List<Helyettesítés> Helyettesítések { get; } = new List<Helyettesítés>();
         /// <summary>
         /// Frissíti az osztálylistát és az eredeti órarendet, első megnyitásnál, és egy órarend hozzáadásánál/szerkesztésénél, majd hetente elegendő meghívni
-        /// <param name="s">A file stream, ahova mentse az adatokat, hogy ne kelljen külön meghívni</param>
+        /// <param name="órarendstream">A file stream, ahova mentse az adatokat, hogy ne kelljen külön meghívni</param>
+        /// <param name="osztálystream">A file stream, ahova mentse az adatokat, hogy ne kelljen külön meghívni</param>
         /// </summary>
-        public static async Task Frissítés(Stream s)
+        public static async Task Frissítés(Stream órarendstream, Stream osztálystream, Órarend ór = null)
         {
             Func<string, Task<HtmlDocument>> load = async (url) =>
             {
@@ -49,57 +50,62 @@ namespace Orarend
                 var doc = await load("http://deri.enaplo.net/ajax/orarend/orarendoszt.php");
                 await Task.Run(() => Osztályok = doc.GetElementbyId("uok").ChildNodes.Where(node => node.HasAttributes).Select(node => new Osztály { Azonosító = node.GetAttributeValue("value", ""), Név = node.NextSibling.InnerText }).ToArray());
             }
-            foreach (var órarend in Órarendek)
-            {
-                var doc = await load("http://deri.enaplo.net/ajax/orarend/orarendoszt.php?p=" + Uri.EscapeDataString(órarend.Osztály.Azonosító));
-                await Task.Run(() =>
-                    {
-                        Osztályok = doc.GetElementbyId("uok").ChildNodes.Where(node => node.HasAttributes).Select(node => new Osztály { Azonosító = node.GetAttributeValue("value", ""), Név = node.NextSibling.InnerText }).ToArray();
-                        bool ahét = true;
-                        foreach (var node in doc.GetElementbyId("oda").FirstChild.FirstChild.ChildNodes[1].ChildNodes)
-                        {
-                            switch (node.FirstChild.InnerText)
-                            {
-                                case "A":
-                                    ahét = true;
-                                    break;
-                                case "B":
-                                    ahét = false;
-                                    break;
-                                default:
-                                    {
-                                        int x = int.Parse(node.FirstChild.InnerText) - 1;
-                                        órarend.Órakezdetek[x] = TimeSpan.Parse(node.FirstChild.Attributes["title"].Value.Split('-')[0].Trim());
-                                        for (int i = 0; i < 5; i++) //Napok
-                                        { //TODO: for ciklus az egy időben tartott órákhoz
-                                            var óranode = node.ChildNodes[i + 1].FirstChild;
-                                            var óra = (ahét ? órarend.ÓrákAHét : órarend.ÓrákBHét)[i, x];
-                                            if (óranode.ChildNodes.Count == 0)
-                                                continue;
-                                            var csoport = óranode.FirstChild.InnerText.TrimEnd(':');
-                                            if (csoport != "Egész osztály" && !órarend.Csoportok.Contains(csoport))
-                                                continue;
-                                            if (óra == null)
-                                                (ahét ? órarend.ÓrákAHét : órarend.ÓrákBHét)[i, x] = óra = new Óra();
-                                            óra.Csoportok = new string[] { csoport }; //Az állandó órarendben osztályonként csak egy csoport van egy órán
-                                            óra.Azonosító = óranode.ChildNodes[2].InnerText;
-                                            óra.TeljesNév = óranode.ChildNodes[2].Attributes["title"].Value;
-                                            óra.Terem = óranode.ChildNodes[3].InnerText.Trim(' ', '(', ')');
-                                            óra.Tanár = new Tanár
-                                            {
-                                                Azonosító = óranode.ChildNodes[4].InnerText,
-                                                Név = óranode.ChildNodes[4].Attributes["title"].Value
-                                            };
-                                        }
-                                        break;
-                                    }
-                            }
-                        }
-                        ÓrarendMentés(s);
-                        OsztályMentés(s);
-                        Thread.Sleep(10);
-                    });
-            }
+            Func<Órarend, Task> órarenda = async órarend =>
+              {
+                  var doc = await load("http://deri.enaplo.net/ajax/orarend/orarendoszt.php?p=" + Uri.EscapeDataString(órarend.Osztály.Azonosító));
+                  await Task.Run(() =>
+                      {
+                          Osztályok = doc.GetElementbyId("uok").ChildNodes.Where(node => node.HasAttributes).Select(node => new Osztály { Azonosító = node.GetAttributeValue("value", ""), Név = node.NextSibling.InnerText }).ToArray();
+                          bool ahét = true;
+                          foreach (var node in doc.GetElementbyId("oda").FirstChild.FirstChild.ChildNodes[1].ChildNodes)
+                          {
+                              switch (node.FirstChild.InnerText)
+                              {
+                                  case "A":
+                                      ahét = true;
+                                      break;
+                                  case "B":
+                                      ahét = false;
+                                      break;
+                                  default:
+                                      {
+                                          int x = int.Parse(node.FirstChild.InnerText) - 1;
+                                          órarend.Órakezdetek[x] = TimeSpan.Parse(node.FirstChild.Attributes["title"].Value.Split('-')[0].Trim());
+                                          for (int i = 0; i < 5; i++) //Napok
+                                          { //TODO: for ciklus az egy időben tartott órákhoz
+                                              var óranode = node.ChildNodes[i + 1].FirstChild;
+                                              var óra = (ahét ? órarend.ÓrákAHét : órarend.ÓrákBHét)[i, x];
+                                              if (óranode.ChildNodes.Count == 0)
+                                                  continue;
+                                              var csoport = óranode.FirstChild.InnerText.TrimEnd(':');
+                                              if (csoport != "Egész osztály" && !órarend.Csoportok.Contains(csoport))
+                                                  continue;
+                                              if (óra == null)
+                                                  (ahét ? órarend.ÓrákAHét : órarend.ÓrákBHét)[i, x] = óra = new Óra();
+                                              óra.Csoportok = new string[] { csoport }; //Az állandó órarendben osztályonként csak egy csoport van egy órán
+                                              óra.Azonosító = óranode.ChildNodes[2].InnerText;
+                                              óra.TeljesNév = óranode.ChildNodes[2].Attributes["title"].Value;
+                                              óra.Terem = óranode.ChildNodes[3].InnerText.Trim(' ', '(', ')');
+                                              óra.Tanár = new Tanár
+                                              {
+                                                  Azonosító = óranode.ChildNodes[4].InnerText,
+                                                  Név = óranode.ChildNodes[4].Attributes["title"].Value
+                                              };
+                                          }
+                                          break;
+                                      }
+                              }
+                          }
+                          Thread.Sleep(10);
+                      });
+              };
+            if (ór == null)
+                foreach (var órarend in Órarendek)
+                    await órarenda(órarend);
+            else
+                await órarenda(ór);
+            ÓrarendMentés(órarendstream);
+            OsztályMentés(osztálystream);
         }
 
         /// <summary>
@@ -118,76 +124,73 @@ namespace Orarend
             }); //TODO
         }
 
-        public static void ÓrarendBetöltés(Stream s)
+        private static T betöltés<T>(Stream s)
         {
             using (s)
             {
-                var serializer = new DataContractJsonSerializer(typeof(Órarend[]));
-                Órarendek.AddRange((Órarend[])serializer.ReadObject(s));
+                using (var ms = new MemoryStream())
+                {
+                    s.CopyTo(ms);
+                    if (ms.Length > 2)
+                    {
+                        var serializer = new DataContractJsonSerializer(typeof(T));
+                        return (T)serializer.ReadObject(ms);
+                    }
+                    return default(T);
+                }
             }
+        }
+
+        public static void ÓrarendBetöltés(Stream s)
+        {
+            Órarendek.AddRange(betöltés<Órarend[]>(s) ?? new Órarend[0]);
         }
 
         public static void OsztályBetöltés(Stream s)
         {
-            using (s)
-            {
-                var serializer = new DataContractJsonSerializer(typeof(Osztály[]));
-                Osztályok = ((Osztály[])serializer.ReadObject(s));
-            }
+            Osztályok = betöltés<Osztály[]>(s);
         }
 
         public static void BeállításBetöltés(Stream s)
         {
-            using (s)
-            {
-                var serializer = new DataContractJsonSerializer(typeof(Settings));
-                Beállítások = ((Settings)serializer.ReadObject(s));
-            }
+            Beállítások = betöltés<Settings>(s);
         }
 
         public static void HelyettesítésBetöltés(Stream s)
+        { //TODO: Tényleges órarendből állapítsa meg azt is, hogyha egyáltalán nincs ott egy óra, és máshol sincs, és ezt írja ki
+            Helyettesítések.AddRange(betöltés<Helyettesítés[]>(s) ?? new Helyettesítés[0]);
+        }
+
+        private static void mentés<T>(Stream s, T obj)
         {
             using (s)
             {
-                var serializer = new DataContractJsonSerializer(typeof(Helyettesítés[])); //TODO: Tényleges órarendből állapítsa meg azt is, hogyha egyáltalán nincs ott egy óra, és máshol sincs, és ezt írja ki
-                Helyettesítések.AddRange((Helyettesítés[])serializer.ReadObject(s));
+                if (obj != null)
+                {
+                    var serializer = new DataContractJsonSerializer(typeof(T));
+                    serializer.WriteObject(s, obj);
+                }
             }
         }
 
         private static void ÓrarendMentés(Stream s)
         {
-            using (s)
-            {
-                var serializer = new DataContractJsonSerializer(typeof(Órarend[]));
-                serializer.WriteObject(s, Órarendek);
-            }
+            mentés(s, Órarendek.ToArray());
         }
 
         private static void OsztályMentés(Stream s)
         {
-            using (s)
-            {
-                var serializer = new DataContractJsonSerializer(typeof(Osztály[]));
-                serializer.WriteObject(s, Osztályok);
-            }
+            mentés(s, Osztályok);
         }
 
         public static void BeállításMentés(Stream s)
         {
-            using (s)
-            {
-                var serializer = new DataContractJsonSerializer(typeof(Settings));
-                serializer.WriteObject(s, Beállítások);
-            }
+            mentés(s, Beállítások);
         }
 
         private static void HelyettesítésMentés(Stream s)
         {
-            using (s)
-            {
-                var serializer = new DataContractJsonSerializer(typeof(Helyettesítés[]));
-                serializer.WriteObject(s, Helyettesítések);
-            }
+            mentés(s, Helyettesítések.ToArray());
         }
     }
 }

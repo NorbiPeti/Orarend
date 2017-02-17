@@ -28,7 +28,8 @@ namespace OrarendAndroidApp
             SetContentView(Resource.Layout.MainLayout);
             ActionBar.SetDisplayShowTitleEnabled(false);
             ActionBar.CustomView = FindViewById<Spinner>(Resource.Id.spinner);
-            handler = new Handler();
+                handler = new Handler();
+            new StreamReader(OpenFileInput("osztaly")).ReadToEnd(); //TODO: TMP, fix "[{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}]"
             string[] list = FileList();
             if (list.Contains("beallitasok"))
                 API.BeállításBetöltés(OpenFileInput("beallitasok"));
@@ -58,21 +59,31 @@ namespace OrarendAndroidApp
 
         private void HelyettesítésFrissítés()
         {
-            API.HelyettesítésFrissítés().ContinueWith(t =>
-            { //TODO: Ezt ne itt, ne így
-            }); //TODO: Tárolja el a helyettesített órarendeket is valahogyan, akár külön osztály, hogy csak a változásokat tárolja
-        }
-
-        private void ÓrarendFrissítés()
-        { //TODO: Meghívni minden tervezett alkalommal; hozzáadásnál csak a hozzáadott órarendet frissítse
-            API.Frissítés(OpenFileOutput("orarend", FileCreationMode.Private)).ContinueWith(t =>
+            var bar = FindViewById<ProgressBar>(Resource.Id.progressBar1);
+            handler.Post(() => bar.Visibility = ViewStates.Visible);
+            API.HelyettesítésFrissítés(OpenFileOutput("helyettesites", FileCreationMode.Private)).ContinueWith(t =>
             {
                 handler.Post(() =>
                 {
-                    if(TaskHiba(t))
+                    bar.Visibility = ViewStates.Gone;
+                    Toast.MakeText(this, "Helyettesítések frissítve", ToastLength.Short);
+                });
+            });
+        }
+
+        private void ÓrarendFrissítés(Órarend ór = null)
+        { //TODO: Meghívni minden tervezett alkalommal; hozzáadásnál csak a hozzáadott órarendet frissítse
+            var bar = FindViewById<ProgressBar>(Resource.Id.progressBar1);
+            handler.Post(() => bar.Visibility = ViewStates.Visible);
+            API.Frissítés(OpenFileOutput("orarend", FileCreationMode.Private), OpenFileOutput("osztaly", FileCreationMode.Private), ór).ContinueWith(t =>
+            {
+                handler.Post(() =>
+                {
+                    if (TaskHiba(t) && órarend != null && (ór == null || ór == órarend))
                     {
                         var table = FindViewById<TableLayout>(Resource.Id.tableLayout1);
-                        table.RemoveViews(0, table.ChildCount); //TODO: Test
+                        if (table.ChildCount > 1)
+                            table.RemoveViews(1, table.ChildCount);
                         TableRow tr = new TableRow(this);
                         addCell("", Color.Black, tr);
                         addCell("Hétfő", Color.Black, tr);
@@ -103,6 +114,8 @@ namespace OrarendAndroidApp
                             }
                         }
                     }
+                    bar.Visibility = ViewStates.Gone;
+                    Toast.MakeText(this, "Órarend és osztálylista frissítve", ToastLength.Long);
                 });
             });
         }
@@ -146,12 +159,7 @@ namespace OrarendAndroidApp
             {
                 case Resource.Id.menu_refresh:
                     {
-                        var bar = FindViewById<ProgressBar>(Resource.Id.progressBar1);
-                        handler.Post(() => bar.Visibility = ViewStates.Visible);
-                        API.HelyettesítésFrissítés().ContinueWith(t => //TODO: Megjelenítés frissítése
-                        {
-                            handler.Post(() => bar.Visibility = ViewStates.Gone);
-                        });
+                        HelyettesítésFrissítés();
                         break;
                     }
                 case Resource.Id.menu_add: //TODO
@@ -160,16 +168,9 @@ namespace OrarendAndroidApp
                     break;
                 case Resource.Id.menu_preferences: //TODO
                     break;
-                case Resource.Id.menu_fullrefresh:
-                    {
-                        var bar = FindViewById<ProgressBar>(Resource.Id.progressBar1);
-                        handler.Post(() => bar.Visibility = ViewStates.Visible);
-                        API.Frissítés().ContinueWith(t => //TODO: Megjelenítés frissítése
-                        {
-                            API.ÓrarendMentés(OpenFileOutput("orarend", FileCreationMode.Private));
-                            API.OsztályMentés(OpenFileOutput("osztaly", FileCreationMode.Private)); //TODO: Beállítások mentése
-                            handler.Post(() => bar.Visibility = ViewStates.Gone);
-                        });
+                case Resource.Id.menu_fullrefresh: //TODO: Megjelenítés frissítése
+                    { //TODO: Beállítások mentése
+                        ÓrarendFrissítés();
                         break;
                     }
             }
