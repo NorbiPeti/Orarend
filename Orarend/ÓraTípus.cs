@@ -1,11 +1,16 @@
 ﻿using System.Collections.Generic;
+using System.Runtime.Serialization;
 
 namespace Orarend
 {
+    [DataContract]
     public class ÓraTípus
     {
+        [DataMember]
         public string TeljesNév { get; set; }
+        [DataMember]
         public string Azonosító { get; set; }
+        [DataMember]
         public string EgyediNév { get; set; }
 
         /// <summary>

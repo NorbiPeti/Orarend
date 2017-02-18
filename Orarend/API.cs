@@ -74,14 +74,14 @@ namespace Orarend
                                           for (int i = 0; i < 5; i++) //Napok
                                           { //TODO: for ciklus az egy időben tartott órákhoz
                                               var óranode = node.ChildNodes[i + 1].FirstChild;
-                                              var óra = (ahét ? órarend.ÓrákAHét : órarend.ÓrákBHét)[i, x];
+                                              var óra = (ahét ? órarend.ÓrákAHét : órarend.ÓrákBHét)[i][x];
                                               if (óranode.ChildNodes.Count == 0)
                                                   continue;
                                               var csoport = óranode.FirstChild.InnerText.TrimEnd(':');
                                               if (csoport != "Egész osztály" && !órarend.Csoportok.Contains(csoport))
                                                   continue;
                                               if (óra == null)
-                                                  (ahét ? órarend.ÓrákAHét : órarend.ÓrákBHét)[i, x] = óra = new Óra();
+                                                  (ahét ? órarend.ÓrákAHét : órarend.ÓrákBHét)[i][x] = óra = new Óra();
                                               óra.Csoportok = new string[] { csoport }; //Az állandó órarendben osztályonként csak egy csoport van egy órán
                                               óra.Azonosító = óranode.ChildNodes[2].InnerText;
                                               óra.TeljesNév = óranode.ChildNodes[2].Attributes["title"].Value;
@@ -133,6 +133,7 @@ namespace Orarend
                     s.CopyTo(ms);
                     if (ms.Length > 2)
                     {
+                        ms.Seek(0, SeekOrigin.Begin);
                         var serializer = new DataContractJsonSerializer(typeof(T));
                         return (T)serializer.ReadObject(ms);
                     }
@@ -148,7 +149,7 @@ namespace Orarend
 
         public static void OsztályBetöltés(Stream s)
         {
-            Osztályok = betöltés<Osztály[]>(s);
+            Osztályok = betöltés<Osztály[]>(s) ?? new Osztály[0];
         }
 
         public static void BeállításBetöltés(Stream s)

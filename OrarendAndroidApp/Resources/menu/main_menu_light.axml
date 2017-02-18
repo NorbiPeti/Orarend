@@ -2,17 +2,17 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
   <item android:id="@+id/spinner"
       android:title="will be replaced anyway"
-      android:showAsAction="ifRoom"
+      android:showAsAction="always"
       android:actionViewClass="android.widget.Spinner" />
   <item
        android:id="@+id/menu_refresh"
        android:icon="@drawable/ic_autorenew_black_24dp"
-       android:showAsAction="ifRoom"
+       android:showAsAction="always"
        android:title="Frissítés" />
   <item
        android:id="@+id/menu_add"
        android:icon="@drawable/ic_add_black_24dp"
-       android:showAsAction="ifRoom"
+       android:showAsAction="always"
        android:title="Hozzáadás" />
   <item
        android:id="@+id/menu_edit"

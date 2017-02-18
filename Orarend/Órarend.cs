@@ -1,33 +1,41 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Orarend
 {
+    [DataContract]
     public class Órarend
     {
         /// <summary>
         /// <para>Egy 6x16 2D tömb, az első koordináta a nap indexe, a második az óráé. Az értékek lehetnek null-ok, ha nincs óra az adott időpontban</para>
         /// <para>Egy <see cref="API.Frissítés"/> hívás állítja be az órákat</para>
         /// </summary>
-        public Óra[,] ÓrákAHét { get; } = new Óra[6, 16];
+        [DataMember]
+        public Óra[][] ÓrákAHét { get; private set; } = new Óra[6][] { new Óra[16], new Óra[16], new Óra[16], new Óra[16], new Óra[16], new Óra[16] };
         /// <summary>
         /// <para>Egy 6x16 2D tömb, az első koordináta a nap indexe, a második az óráé. Az értékek lehetnek null-ok, ha nincs óra az adott időpontban</para>
         /// <para>Egy <see cref="API.Frissítés"/> hívás állítja be az órákat</para>
         /// </summary>
-        public Óra[,] ÓrákBHét { get; } = new Óra[6, 16];
+        [DataMember]
+        public Óra[][] ÓrákBHét { get; private set; } = new Óra[6][] { new Óra[16], new Óra[16], new Óra[16], new Óra[16], new Óra[16], new Óra[16] }; //Multidimensional arrays are not supported (serialization)
         /// <summary>
         /// <para>Egy <see cref="API.Frissítés"/> hívás állítja be</para>
         /// </summary>
+        [DataMember]
         public string Név { get; set; }
+        [DataMember]
         public Osztály Osztály { get; set; }
         /// <summary>
         /// Egy 16 elemű tömb az órák kezdő időpontjaival
         /// </summary>
-        public TimeSpan[] Órakezdetek { get; } = new TimeSpan[16];
-        public List<string> Csoportok { get; }
+        [DataMember]
+        public TimeSpan[] Órakezdetek { get; private set; } = new TimeSpan[16];
+        [DataMember]
+        public List<string> Csoportok { get; private set; } = new List<string>(); //A private set kell a serialization miatt
 
         /// <summary>
         /// Létrehoz egy új órarendet
@@ -39,7 +47,12 @@ namespace Orarend
         {
             Név = név;
             Osztály = osztály;
-            Csoportok = new List<string>(csoportok.Replace("Egész osztály", "").Trim().Split(' '));
+            Csoportok.AddRange(csoportok.Replace("Egész osztály", "").Trim().Split(' '));
+        }
+
+        public override string ToString()
+        {
+            return Név;
         }
     }
 }

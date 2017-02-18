@@ -102,23 +102,26 @@ namespace OrarendAndroidApp
 			// aapt resource value: 0x7f06000b
 			public const int kovoraTV = 2131099659;
 			
-			// aapt resource value: 0x7f06000e
-			public const int menu_add = 2131099662;
-			
 			// aapt resource value: 0x7f06000f
-			public const int menu_edit = 2131099663;
-			
-			// aapt resource value: 0x7f060011
-			public const int menu_fullrefresh = 2131099665;
+			public const int menu_add = 2131099663;
 			
 			// aapt resource value: 0x7f060010
-			public const int menu_preferences = 2131099664;
+			public const int menu_edit = 2131099664;
 			
-			// aapt resource value: 0x7f06000d
-			public const int menu_refresh = 2131099661;
+			// aapt resource value: 0x7f060012
+			public const int menu_fullrefresh = 2131099666;
+			
+			// aapt resource value: 0x7f060011
+			public const int menu_preferences = 2131099665;
+			
+			// aapt resource value: 0x7f06000e
+			public const int menu_refresh = 2131099662;
 			
 			// aapt resource value: 0x7f060006
 			public const int nevTV = 2131099654;
+			
+			// aapt resource value: 0x7f06000c
+			public const int osztalylistaTV = 2131099660;
 			
 			// aapt resource value: 0x7f060005
 			public const int pozTV = 2131099653;
@@ -126,8 +129,8 @@ namespace OrarendAndroidApp
 			// aapt resource value: 0x7f060003
 			public const int progressBar1 = 2131099651;
 			
-			// aapt resource value: 0x7f06000c
-			public const int spinner = 2131099660;
+			// aapt resource value: 0x7f06000d
+			public const int spinner = 2131099661;
 			
 			// aapt resource value: 0x7f060002
 			public const int tableLayout1 = 2131099650;
@@ -153,6 +156,9 @@ namespace OrarendAndroidApp
 			
 			// aapt resource value: 0x7f030000
 			public const int MainLayout = 2130903040;
+			
+			// aapt resource value: 0x7f030001
+			public const int simple_list_item_1 = 2130903041;
 			
 			static Layout()
 			{
