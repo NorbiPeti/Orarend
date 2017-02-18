@@ -39,6 +39,11 @@ namespace OrarendAndroidApp
             if (list.Contains("helyettesites"))
                 API.HelyettesítésBetöltés(OpenFileInput("helyettesites"));
             var timer = new Timer(CsengőTimer, null, TimeSpan.Zero, new TimeSpan(0, 0, 1));
+            if (API.Órarendek.Count > 0)
+            {
+                órarend = API.Órarendek.First();
+                órarendfrissítés();
+            }
         }
 
         private void osztálylistafrissítés()
@@ -48,15 +53,6 @@ namespace OrarendAndroidApp
                 var list = FindViewById<Spinner>(Resource.Id.spinner);
                 list.Adapter = new ArrayAdapter(this, Resource.Layout.simple_list_item_1, API.Órarendek);
                 list.ItemSelected += ÓrarendClick;
-
-
-                bool a = API.Órarendek == null;
-                bool ab = API.Osztályok == null;
-                bool b = API.Osztályok.Any(o => o == null);
-                var osz = API.Osztályok.First(o => o.Azonosító == "12.b|2");
-                var ór = new Órarend("Teszt", osz, "");
-                API.Órarendek.Add(ór); //TODO: TMP
-                API.Órarendek.Add(new Órarend("Teszt2", API.Osztályok.First(o => o.Azonosító == "10.b|2"), "")); //TODO: TMP
             });
         }
 
@@ -101,45 +97,48 @@ namespace OrarendAndroidApp
                 handler.Post(() =>
                 {
                     if (TaskHiba(t) && órarend != null && (ór == null || ór == órarend))
-                    {
-                        var table = FindViewById<TableLayout>(Resource.Id.tableLayout1);
-                        if (table.ChildCount > 1)
-                            table.RemoveViews(1, table.ChildCount);
-                        TableRow tr = new TableRow(this);
-                        addCell("", Color.Black, tr);
-                        addCell("Hétfő", Color.Black, tr);
-                        addCell("Kedd", Color.Black, tr);
-                        addCell("Szerda", Color.Black, tr);
-                        addCell("Csütörtök", Color.Black, tr);
-                        addCell("Péntek", Color.Black, tr);
-                        addCell("Szombat", Color.Black, tr);
-                        table.AddView(tr, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WrapContent, ViewGroup.LayoutParams.WrapContent));
-                        for (int j = 0; j < órarend.ÓrákAHét.GetLength(1); j++) //TODO: GetLength fix
-                        {
-                            tr = new TableRow(this);
-                            bool notnull = false;
-                            for (int i = 0; i < órarend.ÓrákAHét.GetLength(0); i++)
-                            { //Kihagyja az üres sorokat
-                                if (órarend.ÓrákAHét[i][j] != null)
-                                {
-                                    notnull = true;
-                                    break;
-                                }
-                            }
-                            if (notnull)
-                            {
-                                addCell((j + 1).ToString(), Color.Black, tr);
-                                for (int i = 0; i < órarend.ÓrákAHét.GetLength(0); i++)
-                                    addCell(órarend.ÓrákAHét[i][j] != null ? órarend.ÓrákAHét[i][j].EgyediNév : "", Color.Black, tr, true, new int[2] { i, j });
-                                table.AddView(tr, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WrapContent, ViewGroup.LayoutParams.WrapContent));
-                            }
-                        }
-                    }
+                        órarendfrissítés();
                     bar.Visibility = ViewStates.Gone;
-                    Toast.MakeText(this, "Órarend és osztálylista frissítve", ToastLength.Long).Show();
                     osztálylistafrissítés();
+                    Toast.MakeText(this, "Órarend és osztálylista frissítve", ToastLength.Long).Show();
                 });
             });
+        }
+
+        private void órarendfrissítés()
+        {
+            var table = FindViewById<TableLayout>(Resource.Id.tableLayout1);
+            if (table.ChildCount > 1)
+                table.RemoveViews(1, table.ChildCount - 1);
+            TableRow tr = new TableRow(this);
+            addCell("", Color.Black, tr);
+            addCell("Hétfő", Color.Black, tr);
+            addCell("Kedd", Color.Black, tr);
+            addCell("Szerda", Color.Black, tr);
+            addCell("Csütörtök", Color.Black, tr);
+            addCell("Péntek", Color.Black, tr);
+            addCell("Szombat", Color.Black, tr);
+            table.AddView(tr, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WrapContent, ViewGroup.LayoutParams.WrapContent));
+            for (int j = 0; j < 16; j++)
+            {
+                tr = new TableRow(this);
+                bool notnull = false;
+                for (int i = 0; i < 6; i++)
+                { //Kihagyja az üres sorokat
+                    if (órarend.ÓrákAHét[i][j] != null)
+                    {
+                        notnull = true;
+                        break;
+                    }
+                }
+                if (notnull)
+                {
+                    addCell((j + 1).ToString(), Color.Black, tr);
+                    for (int i = 0; i < 6; i++)
+                        addCell(órarend.ÓrákAHét[i][j] != null ? órarend.ÓrákAHét[i][j].EgyediNév : "", Color.Black, tr, true, new int[2] { i, j });
+                    table.AddView(tr, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WrapContent, ViewGroup.LayoutParams.WrapContent));
+                }
+            }
         }
 
         private TextView selected;
@@ -275,10 +274,12 @@ namespace OrarendAndroidApp
                         kovora.Visibility = ViewStates.Invisible;
                     }
                     int x = (int)DateTime.Today.DayOfWeek - 1;
+                    if (x == -1) //Vasárnap
+                        break;
                     var óra = órarend.ÓrákAHét[x][i];
                     if (x < 6 && óra != null)
                     {
-                        kovora.Text = "Következő óra: " + óra.EgyediNév + "\n" + óra.Terem + "\n" + óra.Tanár.Név+"\n"+"ASD";
+                        kovora.Text = "Következő óra: " + óra.EgyediNév + "\n" + óra.Terem + "\n" + óra.Tanár.Név;
                         kovora.Visibility = ViewStates.Visible;
                     }
                     else
