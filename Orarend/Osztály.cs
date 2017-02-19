@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace Orarend
 {
     [DataContract]
-    public class Osztály
+    public class Osztály : IEquatable<Osztály>
     {
         [DataMember]
         public string Azonosító { get; internal set; }
@@ -21,6 +21,11 @@ namespace Orarend
         public override string ToString()
         {
             return Név;
+        }
+
+        public bool Equals(Osztály other)
+        {
+            return Azonosító == other.Azonosító;
         }
     }
 }

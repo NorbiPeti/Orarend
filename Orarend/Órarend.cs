@@ -33,9 +33,9 @@ namespace Orarend
         /// Egy 16 elemű tömb az órák kezdő időpontjaival
         /// </summary>
         [DataMember]
-        public TimeSpan[] Órakezdetek { get; private set; } = new TimeSpan[16];
+        public TimeSpan[] Órakezdetek { get; private set; } = new TimeSpan[16]; //A private set kell a serialization miatt
         [DataMember]
-        public List<string> Csoportok { get; private set; } = new List<string>(); //A private set kell a serialization miatt
+        public string[] Csoportok { get; set; }
 
         /// <summary>
         /// Létrehoz egy új órarendet
@@ -47,7 +47,7 @@ namespace Orarend
         {
             Név = név;
             Osztály = osztály;
-            Csoportok.AddRange(csoportok.Replace("Egész osztály", "").Trim().Split(' '));
+            Csoportok = csoportok.Replace("Egész osztály", "").Trim().Split(' ');
         }
 
         public override string ToString()

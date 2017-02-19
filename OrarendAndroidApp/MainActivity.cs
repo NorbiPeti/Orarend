@@ -46,19 +46,23 @@ namespace OrarendAndroidApp
             }
         }
 
-        private void osztálylistafrissítés()
+        private void órarendlistafrissítés()
         {
             handler.Post(() =>
             {
                 var list = FindViewById<Spinner>(Resource.Id.spinner);
-                list.Adapter = new ArrayAdapter(this, Resource.Layout.simple_list_item_1, API.Órarendek);
+                var adapter = (ArrayAdapter)list.Adapter ?? new ArrayAdapter(this, Resource.Layout.simple_list_item_1, API.Órarendek);
+                list.Adapter = adapter;
+                adapter.NotifyDataSetChanged(); //TODO: Teszt
                 list.ItemSelected += ÓrarendClick;
+                //list.SetSelection(list.SelectedItemPosition); //Szöveg frissítése - TODO: Teszt
             });
         }
 
         private void ÓrarendClick(object sender, AdapterView.ItemSelectedEventArgs e)
         {
             órarend = API.Órarendek[e.Position];
+            órarendfrissítés();
         }
 
         private void addCell(string text, Color color, TableRow tr1, bool clickable = false, int[] tag = null)
@@ -99,7 +103,7 @@ namespace OrarendAndroidApp
                     if (TaskHiba(t) && órarend != null && (ór == null || ór == órarend))
                         órarendfrissítés();
                     bar.Visibility = ViewStates.Gone;
-                    osztálylistafrissítés();
+                    órarendlistafrissítés();
                     Toast.MakeText(this, "Órarend és osztálylista frissítve", ToastLength.Long).Show();
                 });
             });
@@ -174,7 +178,7 @@ namespace OrarendAndroidApp
             if (API.Osztályok == null || API.Osztályok.Length == 0)
                 ÓrarendFrissítés();
             else
-                osztálylistafrissítés();
+                órarendlistafrissítés();
             return base.OnCreateOptionsMenu(menu);
         }
 
@@ -190,14 +194,15 @@ namespace OrarendAndroidApp
                 case Resource.Id.menu_add:
                     {
                         var intent = new Intent(this, typeof(EditActivity));
-                        intent.PutExtra("mode", "add");
+                        intent.PutExtra("add", true);
                         StartActivity(intent);
                         break;
                     }
                 case Resource.Id.menu_edit:
                     {
                         var intent = new Intent(this, typeof(EditActivity));
-                        intent.PutExtra("mode", "edit"); //Az aktuális órarend elérhető
+                        intent.PutExtra("add", false);
+                        intent.PutExtra("index", API.Órarendek.IndexOf(órarend));
                         StartActivity(intent);
                         break;
                     }
@@ -292,6 +297,16 @@ namespace OrarendAndroidApp
                     kovora.Visibility = ViewStates.Invisible;
                 }
             }); //TODO: Az egészet függőlegesen görgethetővé tenni
+        }
+
+        public override void FinishFromChild(Activity child)
+        {
+            base.FinishFromChild(child);
+            if (child is EditActivity)
+            {
+                ÓrarendFrissítés(child.Intent.Extras.GetBoolean("add") ? API.Órarendek.Last() : API.Órarendek[child.Intent.Extras.GetInt("index")]);
+                órarendlistafrissítés();
+            }
         }
     }
 }

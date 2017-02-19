@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:minWidth="25px"
+    android:minHeight="25px"
+    android:stretchColumns="*">
+    <TableRow>
+        <TextView
+            android:text="Név:"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/textView1"
+            android:textSize="20dp"
+            android:layout_column="0" />
+        <EditText
+            android:id="@+id/névEditText"
+            android:layout_column="1"
+            android:layout_width="fill_parent"
+            android:layout_height="44.0dp" />
+    </TableRow>
+    <TableRow>
+        <TextView
+            android:text="Osztály:"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/textView2"
+            android:textSize="20dp"
+            android:layout_column="0" />
+        <Spinner
+            android:layout_column="1"
+            android:id="@+id/osztálySpinner"
+            android:layout_width="fill_parent" />
+    </TableRow>
+    <TableRow>
+        <TextView
+            android:text="Csoportok:"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/textView3"
+            android:textSize="20dp"
+            android:layout_column="0" />
+        <EditText
+            android:id="@+id/csoportokEditText  "
+            android:layout_column="1"
+            android:layout_width="fill_parent"
+            android:layout_height="44.0dp" />
+    </TableRow>
+    <TextView
+        android:text="A csoportok megtalálhatók az E-napló osztályzatainál. Pl.: 'Egész osztály a1 pgy1'"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/textView4"
+        android:textSize="16dp" />
+    <Button
+        android:text="Mentés"
+        android:id="@+id/saveButton" />
+</TableLayout>
