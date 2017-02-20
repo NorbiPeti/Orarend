@@ -56,4 +56,7 @@
     <Button
         android:text="Mentés"
         android:id="@+id/saveButton" />
+    <Button
+        android:text="Törlés"
+        android:id="@+id/deleteButton" />
 </TableLayout>

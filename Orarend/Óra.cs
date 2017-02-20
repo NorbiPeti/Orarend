@@ -19,6 +19,7 @@ namespace Orarend
         /// <summary>
         /// Az órán résztvevő csoportok
         /// </summary>
+        [DataMember]
         public string[] Csoportok { get; set; }
         
         public string Azonosító

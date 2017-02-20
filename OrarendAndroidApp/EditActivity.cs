@@ -10,6 +10,7 @@ using Android.Runtime;
 using Android.Views;
 using Android.Widget;
 using Orarend;
+using Android.Graphics;
 
 namespace OrarendAndroidApp
 {
@@ -39,6 +40,35 @@ namespace OrarendAndroidApp
                 FindViewById<EditText>(Resource.Id.csoportokEditText).Text = órarend.Csoportok.Aggregate((a, b) => a + " " + b);
             }
             FindViewById<Button>(Resource.Id.saveButton).Click += SaveButtonClick;
+            var deleteButton = FindViewById<Button>(Resource.Id.deleteButton);
+            if (add)
+                deleteButton.Visibility = ViewStates.Gone;
+            else
+            {
+                deleteButton.SetBackgroundColor(Color.DarkRed);
+                deleteButton.Click += DeleteButtonClick;
+                Intent.Extras.PutBoolean("deleted", false);
+            }
+        }
+
+        private void DeleteButtonClick(object sender, EventArgs e)
+        {
+            new AlertDialog.Builder(this).SetTitle("Törlés").SetMessage("Biztosan törlöd ezt az órarendet?")
+                .SetPositiveButton("Igen", (s, ea) =>
+        { //Törlés
+            API.Órarendek.RemoveAt(index);
+            var intent = new Intent(Intent);
+            intent.PutExtra("deleted", true);
+            ((AlertDialog)s).Dismiss();
+            ((AlertDialog)s).Dispose();
+            API.ÓrarendMentés(OpenFileOutput("orarend", FileCreationMode.Private));
+            SetResult(Result.Ok, intent);
+            Finish();
+        }).SetNegativeButton("Nem", (s, ea) =>
+        {
+            ((AlertDialog)s).Dismiss();
+            ((AlertDialog)s).Dispose();
+        }).Show();
         }
 
         private void SaveButtonClick(object sender, EventArgs e)
@@ -54,7 +84,9 @@ namespace OrarendAndroidApp
                 órarend.Csoportok = csoportok.Split(' ');
             }
             else
-                API.Órarendek.Add(new Órarend(név, osztály, csoportok)); //TODO: Órarend törlése
+                API.Órarendek.Add(new Órarend(név, osztály, csoportok));
+            API.ÓrarendMentés(OpenFileOutput("orarend", FileCreationMode.Private));
+            SetResult(Result.Ok, Intent);
             Finish();
         }
     }

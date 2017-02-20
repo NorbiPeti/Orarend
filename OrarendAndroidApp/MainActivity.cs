@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Threading;
 using System.IO;
+using System.Net;
 
 namespace OrarendAndroidApp
 {
@@ -21,6 +22,8 @@ namespace OrarendAndroidApp
     {
         private Handler handler;
         private Órarend órarend;
+
+        private const int EDIT_ADD_ACT_REQUEST = 1;
         
         protected override void OnCreate(Bundle bundle)
         {
@@ -51,9 +54,17 @@ namespace OrarendAndroidApp
             handler.Post(() =>
             {
                 var list = FindViewById<Spinner>(Resource.Id.spinner);
-                var adapter = (ArrayAdapter)list.Adapter ?? new ArrayAdapter(this, Resource.Layout.simple_list_item_1, API.Órarendek);
+                ArrayAdapter adapter;
+                if (list.Adapter != null)
+                {
+                    adapter = (ArrayAdapter)list.Adapter;
+                    adapter.Clear();
+                    adapter.AddAll(API.Órarendek);
+                }
+                else
+                    adapter = new ArrayAdapter(this, Resource.Layout.simple_list_item_1, API.Órarendek);
                 list.Adapter = adapter;
-                adapter.NotifyDataSetChanged(); //TODO: Teszt
+                adapter.NotifyDataSetChanged();
                 list.ItemSelected += ÓrarendClick;
                 //list.SetSelection(list.SelectedItemPosition); //Szöveg frissítése - TODO: Teszt
             });
@@ -94,19 +105,30 @@ namespace OrarendAndroidApp
 
         private void ÓrarendFrissítés(Órarend ór = null)
         { //TODO: Meghívni minden tervezett alkalommal; hozzáadásnál csak a hozzáadott órarendet frissítse
-            var bar = FindViewById<ProgressBar>(Resource.Id.progressBar1);
-            handler.Post(() => bar.Visibility = ViewStates.Visible);
-            API.Frissítés(OpenFileOutput("orarend", FileCreationMode.Private), OpenFileOutput("osztaly", FileCreationMode.Private), ór).ContinueWith(t =>
+            try
             {
-                handler.Post(() =>
+                var bar = FindViewById<ProgressBar>(Resource.Id.progressBar1);
+                handler.Post(() => bar.Visibility = ViewStates.Visible);
+                API.Frissítés(OpenFileOutput("orarend", FileCreationMode.Private), OpenFileOutput("osztaly", FileCreationMode.Private), ór).ContinueWith(t =>
                 {
-                    if (TaskHiba(t) && órarend != null && (ór == null || ór == órarend))
-                        órarendfrissítés();
-                    bar.Visibility = ViewStates.Gone;
-                    órarendlistafrissítés();
-                    Toast.MakeText(this, "Órarend és osztálylista frissítve", ToastLength.Long).Show();
+                    handler.Post(() =>
+                    {
+                        if (TaskHiba(t) && órarend != null && (ór == null || ór == órarend))
+                            órarendfrissítés();
+                        bar.Visibility = ViewStates.Gone;
+                        órarendlistafrissítés();
+                        Toast.MakeText(this, "Órarend" + (ór == null ? "ek" : "") + " és osztálylista frissítve", ToastLength.Short).Show();
+                    });
                 });
-            });
+            }
+            catch(WebException)
+            {
+                Hiba("Nem sikerült az órarend" + (ór == null ? "ek" : "") + "et frissíteni");
+            }
+            catch(System.Exception e)
+            {
+                Hiba(e.ToString());
+            }
         }
 
         private void órarendfrissítés()
@@ -114,6 +136,7 @@ namespace OrarendAndroidApp
             var table = FindViewById<TableLayout>(Resource.Id.tableLayout1);
             if (table.ChildCount > 1)
                 table.RemoveViews(1, table.ChildCount - 1);
+            FindViewById<TextView>(Resource.Id.kivoraTV).Visibility = ViewStates.Gone;
             TableRow tr = new TableRow(this);
             addCell("", Color.Black, tr);
             addCell("Hétfő", Color.Black, tr);
@@ -160,16 +183,14 @@ namespace OrarendAndroidApp
                 selected.SetBackgroundResource(Resource.Drawable.cell_shape_light);
             tv.SetBackgroundResource(Resource.Drawable.cell_shape_selected_light);
             selected = tv;
-            FindViewById<TextView>(Resource.Id.pozTV).Text = ((TextView)((TableRow)FindViewById<TableLayout>(Resource.Id.tableLayout1).GetChildAt(1)).GetChildAt(ij[0] + 1)).Text + " " + (ij[1] + 1) + ". óra";
-            FindViewById<TextView>(Resource.Id.pozTV).Visibility = ViewStates.Visible;
-            FindViewById<TextView>(Resource.Id.nevTV).Text = óra.TeljesNév;
-            FindViewById<TextView>(Resource.Id.nevTV).Visibility = ViewStates.Visible;
-            FindViewById<TextView>(Resource.Id.teremTV).Text = óra.Terem;
-            FindViewById<TextView>(Resource.Id.teremTV).Visibility = ViewStates.Visible;
-            FindViewById<TextView>(Resource.Id.tanarTV).Text = óra.Tanár.Név;
-            FindViewById<TextView>(Resource.Id.tanarTV).Visibility = ViewStates.Visible;
-            FindViewById<TextView>(Resource.Id.idoTV).Text = órarend.Órakezdetek[ij[1]].ToString("hh\\:mm") + "-" + órarend.Órakezdetek[ij[1]].Add(new TimeSpan(0, 45, 0)).ToString("hh\\:mm");
-            FindViewById<TextView>(Resource.Id.idoTV).Visibility = ViewStates.Visible;
+            var kivora = FindViewById<TextView>(Resource.Id.kivoraTV);
+            kivora.Text = ((TextView)((TableRow)FindViewById<TableLayout>(Resource.Id.tableLayout1).GetChildAt(1)).GetChildAt(ij[0] + 1)).Text + " " + (ij[1] + 1) + ". óra\n"
+            + óra.TeljesNév + "\n"
+            + óra.Terem + "\n"
+            + óra.Tanár.Név + "\n"
+            + órarend.Órakezdetek[ij[1]].ToString("hh\\:mm") + "-" + órarend.Órakezdetek[ij[1]].Add(new TimeSpan(0, 45, 0)).ToString("hh\\:mm") + "\n"
+            + óra.Csoportok.Aggregate((a, b) => a + ", " + b);
+            kivora.Visibility = ViewStates.Visible;
         }
 
         public override bool OnCreateOptionsMenu(IMenu menu)
@@ -195,7 +216,7 @@ namespace OrarendAndroidApp
                     {
                         var intent = new Intent(this, typeof(EditActivity));
                         intent.PutExtra("add", true);
-                        StartActivity(intent);
+                        StartActivityForResult(intent, EDIT_ADD_ACT_REQUEST);
                         break;
                     }
                 case Resource.Id.menu_edit:
@@ -203,7 +224,7 @@ namespace OrarendAndroidApp
                         var intent = new Intent(this, typeof(EditActivity));
                         intent.PutExtra("add", false);
                         intent.PutExtra("index", API.Órarendek.IndexOf(órarend));
-                        StartActivity(intent);
+                        StartActivityForResult(intent, EDIT_ADD_ACT_REQUEST);
                         break;
                     }
                 case Resource.Id.menu_preferences: //TODO
@@ -251,6 +272,12 @@ namespace OrarendAndroidApp
                 var most = DateTime.Now - DateTime.Today;
                 bool talált = false;
                 var kovora = FindViewById<TextView>(Resource.Id.kovoraTV);
+                if (órarend.Órakezdetek[0] == TimeSpan.Zero)
+                { //Még nincsenek beállítva a kezdetek
+                    kezdveg.Text = "Betöltés";
+                    kovora.Visibility = ViewStates.Invisible;
+                    return;
+                }
                 for (int i = 0; i < órarend.Órakezdetek.Length - 1; i++)
                 {
                     var vége = órarend.Órakezdetek[i].Add(new TimeSpan(0, 45, 0));
@@ -262,15 +289,7 @@ namespace OrarendAndroidApp
                             talált = true;
                         }
                         else
-                        {
-                            if (órarend.Órakezdetek[i] == TimeSpan.Zero)
-                            { //Még nincsenek beállítva a kezdetek
-                                kezdveg.Text = "Betöltés";
-                                talált = true;
-                                break;
-                            }
                             continue;
-                        }
                     }
                     else
                     {
@@ -281,10 +300,10 @@ namespace OrarendAndroidApp
                     int x = (int)DateTime.Today.DayOfWeek - 1;
                     if (x == -1) //Vasárnap
                         break;
-                    var óra = órarend.ÓrákAHét[x][i];
-                    if (x < 6 && óra != null)
+                    Óra óra;
+                    if (x < 6 && (óra = órarend.ÓrákAHét[x][i]) != null)
                     {
-                        kovora.Text = "Következő óra: " + óra.EgyediNév + "\n" + óra.Terem + "\n" + óra.Tanár.Név;
+                        kovora.Text = "Következő óra: " + óra.EgyediNév + "\n" + óra.Terem + "\n" + óra.Tanár.Név + "\n" + óra.Csoportok.Aggregate((a, b) => a + ", " + b);
                         kovora.Visibility = ViewStates.Visible;
                     }
                     else
@@ -296,15 +315,18 @@ namespace OrarendAndroidApp
                     kezdveg.Text = "Nincs több óra ma";
                     kovora.Visibility = ViewStates.Invisible;
                 }
-            }); //TODO: Az egészet függőlegesen görgethetővé tenni
+            });
         }
 
-        public override void FinishFromChild(Activity child)
+        protected override void OnActivityResult(int requestCode, [GeneratedEnum] Result resultCode, Intent data)
         {
-            base.FinishFromChild(child);
-            if (child is EditActivity)
+            base.OnActivityResult(requestCode, resultCode, data);
+            if (resultCode == Result.Canceled)
+                return;
+            if (requestCode == EDIT_ADD_ACT_REQUEST)
             {
-                ÓrarendFrissítés(child.Intent.Extras.GetBoolean("add") ? API.Órarendek.Last() : API.Órarendek[child.Intent.Extras.GetInt("index")]);
+                if (!data.Extras.GetBoolean("deleted"))
+                    ÓrarendFrissítés(data.Extras.GetBoolean("add") ? API.Órarendek.Last() : API.Órarendek[data.Extras.GetInt("index")]);
                 órarendlistafrissítés();
             }
         }

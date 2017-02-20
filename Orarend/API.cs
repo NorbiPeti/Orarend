@@ -72,25 +72,29 @@ namespace Orarend
                                           int x = int.Parse(node.FirstChild.InnerText) - 1;
                                           órarend.Órakezdetek[x] = TimeSpan.Parse(node.FirstChild.Attributes["title"].Value.Split('-')[0].Trim());
                                           for (int i = 0; i < 5; i++) //Napok
-                                          { //TODO: for ciklus az egy időben tartott órákhoz
+                                          {
                                               var óranode = node.ChildNodes[i + 1].FirstChild;
                                               var óra = (ahét ? órarend.ÓrákAHét : órarend.ÓrákBHét)[i][x];
                                               if (óranode.ChildNodes.Count == 0)
                                                   continue;
-                                              var csoport = óranode.FirstChild.InnerText.TrimEnd(':');
-                                              if (csoport != "Egész osztály" && !órarend.Csoportok.Contains(csoport))
-                                                  continue;
-                                              if (óra == null)
-                                                  (ahét ? órarend.ÓrákAHét : órarend.ÓrákBHét)[i][x] = óra = new Óra();
-                                              óra.Csoportok = new string[] { csoport }; //Az állandó órarendben osztályonként csak egy csoport van egy órán
-                                              óra.Azonosító = óranode.ChildNodes[2].InnerText;
-                                              óra.TeljesNév = óranode.ChildNodes[2].Attributes["title"].Value;
-                                              óra.Terem = óranode.ChildNodes[3].InnerText.Trim(' ', '(', ')');
-                                              óra.Tanár = new Tanár
+                                              for (int j = 0; j < óranode.ChildNodes.Count; j += 6)
                                               {
-                                                  Azonosító = óranode.ChildNodes[4].InnerText,
-                                                  Név = óranode.ChildNodes[4].Attributes["title"].Value
-                                              };
+                                                  var csoport = óranode.ChildNodes[j].InnerText.TrimEnd(':');
+                                                  if (csoport != "Egész osztály" && !órarend.Csoportok.Contains(csoport))
+                                                      continue;
+                                                  if (óra == null)
+                                                      (ahét ? órarend.ÓrákAHét : órarend.ÓrákBHét)[i][x] = óra = new Óra();
+                                                  óra.Csoportok = new string[] { csoport }; //Az állandó órarendben osztályonként csak egy csoport van egy órán
+                                                  óra.Azonosító = óranode.ChildNodes[j + 2].InnerText;
+                                                  óra.TeljesNév = óranode.ChildNodes[j + 2].Attributes["title"].Value;
+                                                  óra.Terem = óranode.ChildNodes[j + 3].InnerText.Trim(' ', '(', ')');
+                                                  óra.Tanár = new Tanár
+                                                  {
+                                                      Azonosító = óranode.ChildNodes[j + 4].InnerText,
+                                                      Név = óranode.ChildNodes[j + 4].Attributes["title"].Value
+                                                  };
+                                                  break;
+                                              }
                                           }
                                           break;
                                       }
@@ -133,9 +137,16 @@ namespace Orarend
                     s.CopyTo(ms);
                     if (ms.Length > 2)
                     {
-                        ms.Seek(0, SeekOrigin.Begin);
-                        var serializer = new DataContractJsonSerializer(typeof(T));
-                        return (T)serializer.ReadObject(ms);
+                        try
+                        {
+                            ms.Seek(0, SeekOrigin.Begin);
+                            var serializer = new DataContractJsonSerializer(typeof(T));
+                            return (T)serializer.ReadObject(ms);
+                        }
+                        catch
+                        {
+                            return default(T);
+                        }
                     }
                     return default(T);
                 }
@@ -174,7 +185,7 @@ namespace Orarend
             }
         }
 
-        private static void ÓrarendMentés(Stream s)
+        public static void ÓrarendMentés(Stream s)
         {
             mentés(s, Órarendek.ToArray());
         }
