@@ -26,6 +26,11 @@ namespace OrarendAndroidApp
             Title = (add = Intent.Extras.GetBoolean("add")) ? "Hozzáadás" : "Szerkesztés";
             index = Intent.Extras.GetInt("index");
             var osztálySpinner = FindViewById<Spinner>(Resource.Id.osztálySpinner);
+            if (API.Osztályok == null)
+            {
+                MainActivity.Hiba(this, "Az osztálylista üres! Válaszd a Teljes frissítést a menübõl.");
+                Finish();
+            }
             osztálySpinner.Adapter = new ArrayAdapter(this, Resource.Layout.simple_list_item_1, API.Osztályok);
             if (!add)
             {
