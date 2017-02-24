@@ -2,6 +2,7 @@
 using Java.Lang;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -21,7 +22,6 @@ namespace Orarend
         public static Osztály[] Osztályok { get; private set; }
         public static List<Órarend> Órarendek { get; } = new List<Órarend>();
         public static Settings Beállítások { get; private set; } = new Settings();
-        public static List<Helyettesítés> Helyettesítések { get; } = new List<Helyettesítés>();
         /// <summary>
         /// Frissíti az osztálylistát és az eredeti órarendet, első megnyitásnál, és egy órarend hozzáadásánál/szerkesztésénél, majd hetente elegendő meghívni
         /// <param name="órarendstream">A file stream, ahova mentse az adatokat, hogy ne kelljen külön meghívni</param>
@@ -116,8 +116,12 @@ namespace Orarend
         /// Frissíti a helyettesítéseket, naponta, indításkor vagy gombnyommásra frissítse (minden nap az első előtérbe kerüléskor)
         /// <param name="s">A file stream, ahova mentse az adatokat, hogy ne kelljen külön meghívni</param>
         /// </summary>
-        public static async Task HelyettesítésFrissítés(Stream s)
+        public static async Task HelyettesítésFrissítés()
         {
+            if (Órarendek.Count == 0 || Osztályok.Length == 0)
+                return;
+            foreach (var órarend in Órarendek)
+                órarend.Helyettesítések.Clear();
             HtmlDocument doc = new HtmlDocument();
             var req = WebRequest.CreateHttp("http://deri.enaplo.net/ajax/print/htlista.php");
             var resp = await req.GetResponseAsync();
@@ -125,7 +129,35 @@ namespace Orarend
             {
                 using (var sr = new StreamReader(resp.GetResponseStream()))
                     doc.LoadHtml(sr.ReadToEnd());
-            }); //TODO
+                foreach (var node in doc.DocumentNode.ChildNodes[2].ChildNodes[1].ChildNodes)
+                {
+                    DateTime dátum = DateTime.Parse(node.ChildNodes[0].InnerText.Substring(0, node.ChildNodes[0].InnerText.Length - 4));
+                    int hét = CultureInfo.InvariantCulture.Calendar.GetWeekOfYear(dátum, CalendarWeekRule.FirstFullWeek, DayOfWeek.Monday);
+                    if (hét != Hét)
+                        continue;
+                    byte óraszám = byte.Parse(node.ChildNodes[1].InnerText);
+                    Osztály osztály = Osztályok.Single(o => o.Azonosító.Contains(node.ChildNodes[2].InnerText));
+                    string csoport = node.ChildNodes[3].InnerText;
+                    string óraaz = node.ChildNodes[4].InnerText;
+                    string terem = node.ChildNodes[5].InnerText.Split(new string[] { " -> " }, StringSplitOptions.None).Last(); //Mindig az új termet tárolja el, ha változott
+                    string tanár = node.ChildNodes[7].InnerText;
+                    string[] megj = node.ChildNodes[8].InnerText.Split(' ');
+                    DayOfWeek újnap = dátum.DayOfWeek;
+                    byte újsorszám = óraszám;
+                    if (megj.Length > 2)
+                    {
+                        újnap = DateTime.Parse(megj[1]).DayOfWeek;
+                        újsorszám = byte.Parse(megj[2].Trim('.'));
+                    }
+                    var órk = (csoport == "Egész osztály" ? Órarendek : Órarendek.Where(ór => ór.Csoportok.Contains(csoport))).Where(ór => ór.Osztály == osztály).Count();
+                    foreach (var órarend in (csoport == "Egész osztály" ? Órarendek : Órarendek.Where(ór => ór.Csoportok.Contains(csoport))).Where(ór => ór.Osztály == osztály))
+                    //foreach (var órarend in Órarendek.Where(ór => ór.Osztály == osztály && (csoport == "Egész osztály" || ór.Csoportok.Contains(csoport)))) - A probléma valószínűleg a referencia változások miatt volt, a serialization miatt, és hogy alapból nem a .Equals-ot futtatja le ==-kor
+                    {
+                        var helyettesítés = new Helyettesítés { EredetiNap = dátum.DayOfWeek, EredetiSorszám = óraszám, ÚjÓra = tanár == "elmarad" ? null : new Óra { Azonosító = óraaz, Csoportok = new string[] { csoport }, Terem = terem, Tanár = new Tanár { Név = tanár } }, ÚjNap = újnap, ÚjSorszám = újsorszám };
+                        órarend.Helyettesítések.Add(helyettesítés);
+                    }
+                }
+            });
         }
 
         private static T betöltés<T>(Stream s)
@@ -166,12 +198,7 @@ namespace Orarend
         public static void BeállításBetöltés(Stream s)
         {
             Beállítások = betöltés<Settings>(s);
-        }
-
-        public static void HelyettesítésBetöltés(Stream s)
-        { //TODO: Tényleges órarendből állapítsa meg azt is, hogyha egyáltalán nincs ott egy óra, és máshol sincs, és ezt írja ki
-            Helyettesítések.AddRange(betöltés<Helyettesítés[]>(s) ?? new Helyettesítés[0]);
-        }
+        } //TODO: Tényleges órarendből állapítsa meg azt is, hogyha egyáltalán nincs ott egy óra, és máshol sincs, és ezt írja ki
 
         private static void mentés<T>(Stream s, T obj)
         {
@@ -200,9 +227,26 @@ namespace Orarend
             mentés(s, Beállítások);
         }
 
-        private static void HelyettesítésMentés(Stream s)
+        /// <summary>
+        /// Visszatér a megjelenítendő héttel. Ez megegyezik a tényleges héttel, kivéve hétvégén, amikor a következő
+        /// </summary>
+        public static int Hét
         {
-            mentés(s, Helyettesítések.ToArray());
+            get
+            {
+                int jelenlegihét = CultureInfo.InvariantCulture.Calendar.GetWeekOfYear(DateTime.Today, CalendarWeekRule.FirstFullWeek, DayOfWeek.Monday);
+                if (DateTime.Today.DayOfWeek > DayOfWeek.Friday || DateTime.Today.DayOfWeek == DayOfWeek.Sunday)
+                    jelenlegihét++;
+                return jelenlegihét;
+            }
+        }
+
+        public static bool AHét
+        {
+            get
+            {
+                return Hét % 2 == 0;
+            }
         }
     }
 }

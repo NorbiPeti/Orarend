@@ -24,7 +24,7 @@ namespace OrarendAndroidApp
         private Órarend órarend;
 
         private const int EDIT_ADD_ACT_REQUEST = 1;
-        
+
         protected override void OnCreate(Bundle bundle)
         {
             base.OnCreate(bundle);
@@ -35,18 +35,11 @@ namespace OrarendAndroidApp
             string[] list = FileList();
             if (list.Contains("beallitasok"))
                 API.BeállításBetöltés(OpenFileInput("beallitasok"));
-            if (list.Contains("orarend"))
+            if (list.Contains("orarend") && API.Órarendek.Count == 0)
                 API.ÓrarendBetöltés(OpenFileInput("orarend"));
-            if (list.Contains("osztaly"))
+            if (list.Contains("osztaly") && API.Osztályok == null)
                 API.OsztályBetöltés(OpenFileInput("osztaly"));
-            if (list.Contains("helyettesites"))
-                API.HelyettesítésBetöltés(OpenFileInput("helyettesites"));
-            var timer = new Timer(CsengőTimer, null, TimeSpan.Zero, new TimeSpan(0, 0, 1));
-            if (API.Órarendek.Count > 0)
-            {
-                órarend = API.Órarendek.First();
-                órarendfrissítés();
-            }
+            var timer = new Timer(CsengőTimer, null, new TimeSpan(0, 0, 1), new TimeSpan(0, 0, 1));
         }
 
         private void órarendlistafrissítés()
@@ -99,18 +92,20 @@ namespace OrarendAndroidApp
         {
             var bar = FindViewById<ProgressBar>(Resource.Id.progressBar1);
             handler.Post(() => bar.Visibility = ViewStates.Visible);
-            API.HelyettesítésFrissítés(OpenFileOutput("helyettesites", FileCreationMode.Private)).ContinueWith(t =>
+            API.HelyettesítésFrissítés().ContinueWith(t =>
             {
                 handler.Post(() =>
                 {
+                    TaskHiba(t);
                     bar.Visibility = ViewStates.Gone;
+                    órarendfrissítés();
                     Toast.MakeText(this, "Helyettesítések frissítve", ToastLength.Short).Show();
                 });
             });
         }
 
         private void ÓrarendFrissítés(Órarend ór = null)
-        { //TODO: Meghívni minden tervezett alkalommal; hozzáadásnál csak a hozzáadott órarendet frissítse
+        { //TODO: Meghívni minden tervezett alkalommal
             var bar = FindViewById<ProgressBar>(Resource.Id.progressBar1);
             handler.Post(() => bar.Visibility = ViewStates.Visible);
             API.Frissítés(OpenFileOutput("orarend", FileCreationMode.Private), OpenFileOutput("osztaly", FileCreationMode.Private), ór).ContinueWith(t =>
@@ -126,7 +121,7 @@ namespace OrarendAndroidApp
             });
         }
 
-        private void órarendfrissítés()
+        private void órarendfrissítés() //TODO: Helyettesítések támogatása
         {
             var table = FindViewById<TableLayout>(Resource.Id.tableLayout1);
             if (table.ChildCount > 1)
@@ -135,7 +130,7 @@ namespace OrarendAndroidApp
             if (órarend == null)
                 return;
             TableRow tr = new TableRow(this);
-            addCell("", Color.Black, tr);
+            addCell(API.AHét ? "A" : "B", Color.Black, tr);
             addCell("Hétfő", Color.Black, tr);
             addCell("Kedd", Color.Black, tr);
             addCell("Szerda", Color.Black, tr);
@@ -149,7 +144,7 @@ namespace OrarendAndroidApp
                 bool notnull = false;
                 for (int i = 0; i < 6; i++)
                 { //Kihagyja az üres sorokat
-                    if (órarend.ÓrákAHét[i][j] != null)
+                    if (órarend.Órák[i][j] != null)
                     {
                         notnull = true;
                         break;
@@ -159,10 +154,11 @@ namespace OrarendAndroidApp
                 {
                     addCell((j + 1).ToString(), Color.Black, tr);
                     for (int i = 0; i < 6; i++)
-                        addCell(órarend.ÓrákAHét[i][j] != null ? órarend.ÓrákAHét[i][j].EgyediNév : "", Color.Black, tr, true, new int[2] { i, j });
+                        addCell(órarend.Órák[i][j] != null ? órarend.Órák[i][j].EgyediNév : "", Color.Black, tr, true, new int[2] { i, j });
                     table.AddView(tr, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WrapContent, ViewGroup.LayoutParams.WrapContent));
                 }
             }
+            handler.Post(() => MaiNaphozGörgetés());
         }
 
         private TextView selected;
@@ -173,7 +169,7 @@ namespace OrarendAndroidApp
         {
             var tv = (TextView)sender;
             var ij = (int[])tv.Tag;
-            Óra óra = órarend.ÓrákAHét[ij[0]][ij[1]];
+            Óra óra = órarend.Órák[ij[0]][ij[1]];
             if (óra == null)
                 return;
             if (selected != null && selected != sender)
@@ -311,18 +307,22 @@ namespace OrarendAndroidApp
                     if (x == -1) //Vasárnap
                         break;
                     Óra óra;
-                    if (x < 6 && (óra = órarend.ÓrákAHét[x][i]) != null)
+                    if (x < 6 && (óra = órarend.Órák[x][i]) != null)
                     {
                         kovora.Text = "Következő óra: " + óra.EgyediNév + "\n" + óra.Terem + "\n" + óra.Tanár.Név + "\n" + óra.Csoportok.Aggregate((a, b) => a + ", " + b);
                         kovora.Visibility = ViewStates.Visible;
+                        kezdveg.Visibility = ViewStates.Visible;
                     }
                     else
+                    {
                         kovora.Visibility = ViewStates.Invisible;
+                        kezdveg.Visibility = ViewStates.Invisible;
+                    }
                     break;
                 }
                 if (!talált)
                 {
-                    kezdveg.Text = "Nincs több óra ma";
+                    kezdveg.Visibility = ViewStates.Invisible;
                     kovora.Visibility = ViewStates.Invisible;
                 }
             });
@@ -345,6 +345,24 @@ namespace OrarendAndroidApp
                 }
                 órarendlistafrissítés();
             }
+        }
+
+        public override void OnWindowFocusChanged(bool hasFocus)
+        {
+            base.OnWindowFocusChanged(hasFocus);
+            if (!hasFocus)
+                return;
+            MaiNaphozGörgetés();
+            //handler.Post(() => { if ((table.GetChildAt(1) as ViewGroup).GetChildAt((int)x).RequestFocus()) Toast.MakeText(this, "Siker", ToastLength.Short).Show(); else Toast.MakeText(this, "Nem siker", ToastLength.Short).Show(); });
+        }
+
+        private void MaiNaphozGörgetés()
+        {
+            var x = DateTime.Today.DayOfWeek == DayOfWeek.Sunday ? DayOfWeek.Monday : DateTime.Today.DayOfWeek;
+            var table = FindViewById<TableLayout>(Resource.Id.tableLayout1);
+            if (table.ChildCount <= 1)
+                return;
+            FindViewById<HorizontalScrollView>(Resource.Id.horizontalView).SmoothScrollTo((table.GetChildAt(1) as ViewGroup).GetChildAt((int)x).Left, 0);
         }
     }
 }

@@ -27,5 +27,25 @@ namespace Orarend
         {
             return Azonosító == other.Azonosító;
         }
+
+        public static bool operator==(Osztály a, Osztály b)
+        {
+            return a.Equals(b);
+        }
+
+        public static bool operator!=(Osztály a, Osztály b)
+        {
+            return !a.Equals(b);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is Osztály ? Equals(obj as Osztály) : base.Equals(obj);
+        }
+
+        public override int GetHashCode()
+        {
+            return Azonosító.GetHashCode();
+        }
     }
 }

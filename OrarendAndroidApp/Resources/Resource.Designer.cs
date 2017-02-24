@@ -84,11 +84,11 @@ namespace OrarendAndroidApp
 		public partial class Id
 		{
 			
-			// aapt resource value: 0x7f060009
-			public const int ScrollView01 = 2131099657;
+			// aapt resource value: 0x7f06000b
+			public const int ScrollView01 = 2131099659;
 			
-			// aapt resource value: 0x7f06000d
-			public const int ScrollView02 = 2131099661;
+			// aapt resource value: 0x7f060009
+			public const int ScrollView02 = 2131099657;
 			
 			// aapt resource value: 0x7f060013
 			public const int actionMenuView1 = 2131099667;
@@ -99,8 +99,8 @@ namespace OrarendAndroidApp
 			// aapt resource value: 0x7f060008
 			public const int deleteButton = 2131099656;
 			
-			// aapt resource value: 0x7f06000a
-			public const int horizontalView = 2131099658;
+			// aapt resource value: 0x7f06000c
+			public const int horizontalView = 2131099660;
 			
 			// aapt resource value: 0x7f060010
 			public const int kezdvegTV = 2131099664;
@@ -135,20 +135,20 @@ namespace OrarendAndroidApp
 			// aapt resource value: 0x7f060003
 			public const int osztálySpinner = 2131099651;
 			
-			// aapt resource value: 0x7f06000c
-			public const int progressBar1 = 2131099660;
+			// aapt resource value: 0x7f06000e
+			public const int progressBar1 = 2131099662;
 			
 			// aapt resource value: 0x7f060007
 			public const int saveButton = 2131099655;
 			
-			// aapt resource value: 0x7f06000e
-			public const int scrollLinearLayout = 2131099662;
+			// aapt resource value: 0x7f06000a
+			public const int scrollLinearLayout = 2131099658;
 			
 			// aapt resource value: 0x7f060014
 			public const int spinner = 2131099668;
 			
-			// aapt resource value: 0x7f06000b
-			public const int tableLayout1 = 2131099659;
+			// aapt resource value: 0x7f06000d
+			public const int tableLayout1 = 2131099661;
 			
 			// aapt resource value: 0x7f060000
 			public const int textView1 = 2131099648;

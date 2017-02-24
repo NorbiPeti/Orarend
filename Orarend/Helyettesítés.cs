@@ -11,13 +11,11 @@ namespace Orarend
     public class Helyettesítés
     {
         [DataMember]
-        public byte EredetiNap { get; set; }
+        public DayOfWeek EredetiNap { get; set; }
         [DataMember]
         public byte EredetiSorszám { get; set; }
         [DataMember]
-        public Óra EredetiÓra { get; set; }
-        [DataMember]
-        public byte ÚjNap { get; set; }
+        public DayOfWeek ÚjNap { get; set; }
         [DataMember]
         public byte ÚjSorszám { get; set; }
         [DataMember]
