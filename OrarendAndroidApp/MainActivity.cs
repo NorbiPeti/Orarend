@@ -75,7 +75,7 @@ namespace OrarendAndroidApp
             órarendfrissítés();
         }
 
-        private void addCell(string text, Color color, TableRow tr1, bool clickable = false, int[] tag = null)
+        private void addCell(string text, Color color, TableRow tr1, int[] tag = null)
         {
             TextView textview = new TextView(this);
             textview.SetText(text, TextView.BufferType.Normal);
@@ -83,8 +83,8 @@ namespace OrarendAndroidApp
             textview.SetPadding(10, 10, 10, 10);
             textview.SetBackgroundResource(Resource.Drawable.cell_shape_light);
             textview.Tag = tag;
-            if (textview.Clickable = clickable)
-                textview.Click += ÓraClick;
+            textview.Clickable = true;
+            textview.Click += ÓraClick;
             tr1.AddView(textview);
         }
 
@@ -92,7 +92,7 @@ namespace OrarendAndroidApp
         {
             var bar = FindViewById<ProgressBar>(Resource.Id.progressBar1);
             handler.Post(() => bar.Visibility = ViewStates.Visible);
-            API.HelyettesítésFrissítés().ContinueWith(t =>
+            API.HelyettesítésFrissítés(OpenFileOutput("orarend", FileCreationMode.Private)).ContinueWith(t =>
             {
                 handler.Post(() =>
                 {
@@ -121,22 +121,20 @@ namespace OrarendAndroidApp
             });
         }
 
-        private void órarendfrissítés() //TODO: Helyettesítések támogatása
+        private string[] Napok = new string[6] { "Hétfő", "Kedd", "Szerda", "Csütörtök", "Péntek", "Szombat" };
+
+        private void órarendfrissítés()
         {
             var table = FindViewById<TableLayout>(Resource.Id.tableLayout1);
+            deselect();
             if (table.ChildCount > 1)
                 table.RemoveViews(1, table.ChildCount - 1);
-            FindViewById<TextView>(Resource.Id.kivoraTV).Visibility = ViewStates.Gone;
             if (órarend == null)
                 return;
             TableRow tr = new TableRow(this);
             addCell(API.AHét ? "A" : "B", Color.Black, tr);
-            addCell("Hétfő", Color.Black, tr);
-            addCell("Kedd", Color.Black, tr);
-            addCell("Szerda", Color.Black, tr);
-            addCell("Csütörtök", Color.Black, tr);
-            addCell("Péntek", Color.Black, tr);
-            addCell("Szombat", Color.Black, tr);
+            for (int i = 0; i < Napok.Length; i++)
+                addCell(Napok[i], Color.Black, tr);
             table.AddView(tr, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WrapContent, ViewGroup.LayoutParams.WrapContent));
             for (int j = 0; j < 16; j++)
             {
@@ -154,11 +152,25 @@ namespace OrarendAndroidApp
                 {
                     addCell((j + 1).ToString(), Color.Black, tr);
                     for (int i = 0; i < 6; i++)
-                        addCell(órarend.Órák[i][j] != null ? órarend.Órák[i][j].EgyediNév : "", Color.Black, tr, true, new int[2] { i, j });
+                    {
+                        var helyettesítés = órarend.Helyettesítések.SingleOrDefault(h => (int)h.EredetiNap - 1 == i && h.EredetiSorszám - 1 == j);
+                        var helyettesítésIde = órarend.Helyettesítések.SingleOrDefault(h => (int)h.ÚjNap - 1 == i && h.ÚjSorszám - 1 == j && h.ÚjÓra != null); //Ha az eredeti óra elmarad, és ide lesz helyezve egy másik, az áthelyezést mutassa
+                        //addCell(helyettesítés?.ÚjÓra?.EgyediNév ?? órarend.Órák[i][j]?.EgyediNév ?? "", helyettesítés == null ? Color.Black : Color.Red, tr, new int[2] { i, j });
+                        addCell(helyettesítésIde != null ? helyettesítésIde.ÚjÓra.EgyediNév : helyettesítés != null ? helyettesítés.EredetiNap != helyettesítés.ÚjNap || helyettesítés.EredetiSorszám != helyettesítés.ÚjSorszám ? "Áthelyezve" : helyettesítés.ÚjÓra?.EgyediNév ?? "elmarad" : órarend.Órák[i][j]?.EgyediNév ?? "", helyettesítés == null ? Color.Black : Color.Red, tr, new int[2] { i, j });
+                    }
                     table.AddView(tr, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WrapContent, ViewGroup.LayoutParams.WrapContent));
                 }
             }
             handler.Post(() => MaiNaphozGörgetés());
+        }
+
+        /// <summary>
+        /// A cellát nem frissíti, csak a szöveget tünteti el
+        /// </summary>
+        private void deselect()
+        {
+            FindViewById<TextView>(Resource.Id.kivoraTV).Visibility = ViewStates.Gone;
+            selected = null;
         }
 
         private TextView selected;
@@ -169,20 +181,50 @@ namespace OrarendAndroidApp
         {
             var tv = (TextView)sender;
             var ij = (int[])tv.Tag;
-            Óra óra = órarend.Órák[ij[0]][ij[1]];
-            if (óra == null)
-                return;
             if (selected != null && selected != sender)
                 selected.SetBackgroundResource(Resource.Drawable.cell_shape_light);
+            Óra óra;
+            Helyettesítés helyettesítésInnen = null;
+            Helyettesítés helyettesítésIde = null;
+            if (ij != null)
+            {
+                helyettesítésInnen = órarend.Helyettesítések.SingleOrDefault(h => (int)h.EredetiNap == ij[0] + 1 && h.EredetiSorszám == ij[1] + 1);
+                helyettesítésIde = órarend.Helyettesítések.SingleOrDefault(h => (int)h.ÚjNap == ij[0] + 1 && h.ÚjSorszám == ij[1] + 1 && h.ÚjÓra != null); //Ha az eredeti óra elmarad, és ide lesz helyezve egy másik, az áthelyezést mutassa
+            }
+            //if (ij == null || (óra = órarend.Órák[ij[0]][ij[1]] ?? ((helyettesítésIde = órarend.Helyettesítések.SingleOrDefault(h => (int)h.ÚjNap == ij[0] + 1 && h.ÚjSorszám == ij[1] + 1))?.ÚjÓra)) == null)
+            if (ij == null || (óra = órarend.Órák[ij[0]][ij[1]] ?? (helyettesítésIde?.ÚjÓra)) == null)
+            { //Ha az óra nincs beállítva, beállítja a helyettesítettre
+                deselect();
+                return;
+            }
             tv.SetBackgroundResource(Resource.Drawable.cell_shape_selected_light);
             selected = tv;
             var kivora = FindViewById<TextView>(Resource.Id.kivoraTV);
-            kivora.Text = ((TextView)((TableRow)FindViewById<TableLayout>(Resource.Id.tableLayout1).GetChildAt(1)).GetChildAt(ij[0] + 1)).Text + " " + (ij[1] + 1) + ". óra\n"
-            + óra.TeljesNév + "\n"
-            + óra.Terem + "\n"
-            + óra.Tanár.Név + "\n"
-            + órarend.Órakezdetek[ij[1]].ToString("hh\\:mm") + "-" + órarend.Órakezdetek[ij[1]].Add(new TimeSpan(0, 45, 0)).ToString("hh\\:mm") + "\n"
-            + óra.Csoportok.Aggregate((a, b) => a + ", " + b);
+            kivora.Text = Napok[ij[0]] + " " + (ij[1] + 1) + ". óra"
+            + "\nNév: " + óra.TeljesNév
+            + "\nTerem: " + óra.Terem
+            + "\nTanár: " + óra.Tanár.Név
+            + "\nIdőtartam: " + órarend.Órakezdetek[ij[1]].ToString("hh\\:mm") + "-" + órarend.Órakezdetek[ij[1]].Add(new TimeSpan(0, 45, 0)).ToString("hh\\:mm")
+            + "\nCsoport: " + óra.Csoportok.Aggregate((a, b) => a + ", " + b)
+            + (helyettesítésInnen == null ? ""
+                : helyettesítésInnen.EredetiNap != helyettesítésInnen.ÚjNap || helyettesítésInnen.EredetiSorszám != helyettesítésInnen.ÚjSorszám
+                ? "\n\nÁthelyezve: innen --> " + Napok[(int)helyettesítésInnen.ÚjNap - 1] + " " + helyettesítésInnen.ÚjSorszám + ". óra"
+                    : helyettesítésInnen.ÚjÓra != null && helyettesítésInnen.ÚjÓra != óra
+                        ? "\n\nHelyettesítés:"
+                        + (helyettesítésInnen.ÚjÓra.EgyediNév != óra.EgyediNév ? "\nÓra: " + helyettesítésInnen.ÚjÓra.EgyediNév : "")
+                        + (helyettesítésInnen.ÚjÓra.Terem != óra.Terem ? "\nTerem: " + helyettesítésInnen.ÚjÓra.Terem : "")
+                        + (helyettesítésInnen.ÚjÓra.Tanár.Név != óra.Tanár.Név ? "\nTanár: " + helyettesítésInnen.ÚjÓra.Tanár.Név : "")
+                        + (helyettesítésInnen.ÚjÓra.Csoportok[0] != óra.Csoportok[0] ? "\nCsoport: " + helyettesítésInnen.ÚjÓra.Csoportok.Aggregate((a, b) => a + ", " + b) : "")
+                        : "\n\nAz óra elmarad")
+            + (helyettesítésIde == null ? ""
+                : helyettesítésIde.EredetiNap != helyettesítésIde.ÚjNap || helyettesítésIde.EredetiSorszám != helyettesítésIde.ÚjSorszám
+                ? "\n\nÁthelyezve: " + Napok[(int)helyettesítésInnen.EredetiNap - 1] + " " + helyettesítésIde.EredetiSorszám + ". óra --> ide"
+                    + (helyettesítésIde.ÚjÓra.EgyediNév != óra.EgyediNév ? "\nÓra: " + helyettesítésIde.ÚjÓra.EgyediNév : "")
+                    + (helyettesítésIde.ÚjÓra.Terem != óra.Terem ? "\nTerem: " + helyettesítésIde.ÚjÓra.Terem : "")
+                    + ((óra.Tanár.Név != (helyettesítésIde.ÚjÓra.Tanár.Név == "" ? órarend.Órák[(int)helyettesítésIde.EredetiNap - 1][helyettesítésIde.EredetiSorszám - 1].Tanár.Név : helyettesítésIde.ÚjÓra.Tanár.Név)) ? "\nTanár: " + (óra.Tanár.Név == "" ? órarend.Órák[(int)helyettesítésIde.EredetiNap - 1][helyettesítésIde.EredetiSorszám - 1].Tanár.Név : helyettesítésIde.ÚjÓra.Tanár.Név) : "") //TODO: A tanár mező üres ("")
+                    + (helyettesítésIde.ÚjÓra.Csoportok[0] != óra.Csoportok[0] ? "\nCsoport: " + helyettesítésIde.ÚjÓra.Csoportok.Aggregate((a, b) => a + ", " + b) : "") //ˇˇ De ha változott, akkor nem
+                    : "") //Ha a pozicíó nem változott, a fentebbi rész már kiírta az adatait
+            ;
             kivora.Visibility = ViewStates.Visible;
         }
 
@@ -304,11 +346,9 @@ namespace OrarendAndroidApp
                         kovora.Visibility = ViewStates.Invisible;
                     }
                     int x = (int)DateTime.Today.DayOfWeek - 1;
-                    if (x == -1) //Vasárnap
-                        break;
                     Óra óra;
-                    if (x < 6 && (óra = órarend.Órák[x][i]) != null)
-                    {
+                    if (x != -1 && x < 6 && (óra = órarend.Órák[x][i]) != null)
+                    { //-1: Vasárnap
                         kovora.Text = "Következő óra: " + óra.EgyediNév + "\n" + óra.Terem + "\n" + óra.Tanár.Név + "\n" + óra.Csoportok.Aggregate((a, b) => a + ", " + b);
                         kovora.Visibility = ViewStates.Visible;
                         kezdveg.Visibility = ViewStates.Visible;

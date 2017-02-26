@@ -114,9 +114,9 @@ namespace Orarend
 
         /// <summary>
         /// Frissíti a helyettesítéseket, naponta, indításkor vagy gombnyommásra frissítse (minden nap az első előtérbe kerüléskor)
-        /// <param name="s">A file stream, ahova mentse az adatokat, hogy ne kelljen külön meghívni</param>
+        /// <param name="s">A file stream, ahova mentse az ÓRARENDEKET, hogy ne kelljen külön meghívni</param>
         /// </summary>
-        public static async Task HelyettesítésFrissítés()
+        public static async Task HelyettesítésFrissítés(Stream s)
         {
             if (Órarendek.Count == 0 || Osztályok.Length == 0)
                 return;
@@ -142,21 +142,22 @@ namespace Orarend
                     string terem = node.ChildNodes[5].InnerText.Split(new string[] { " -> " }, StringSplitOptions.None).Last(); //Mindig az új termet tárolja el, ha változott
                     string tanár = node.ChildNodes[7].InnerText;
                     string[] megj = node.ChildNodes[8].InnerText.Split(' ');
+                    string óranév = node.ChildNodes[9].InnerText;
                     DayOfWeek újnap = dátum.DayOfWeek;
                     byte újsorszám = óraszám;
                     if (megj.Length > 2)
                     {
                         újnap = DateTime.Parse(megj[1]).DayOfWeek;
-                        újsorszám = byte.Parse(megj[2].Trim('.'));
+                        újsorszám = byte.Parse(megj[3].Trim('.'));
                     }
-                    var órk = (csoport == "Egész osztály" ? Órarendek : Órarendek.Where(ór => ór.Csoportok.Contains(csoport))).Where(ór => ór.Osztály == osztály).Count();
                     foreach (var órarend in (csoport == "Egész osztály" ? Órarendek : Órarendek.Where(ór => ór.Csoportok.Contains(csoport))).Where(ór => ór.Osztály == osztály))
                     //foreach (var órarend in Órarendek.Where(ór => ór.Osztály == osztály && (csoport == "Egész osztály" || ór.Csoportok.Contains(csoport)))) - A probléma valószínűleg a referencia változások miatt volt, a serialization miatt, és hogy alapból nem a .Equals-ot futtatja le ==-kor
                     {
-                        var helyettesítés = new Helyettesítés { EredetiNap = dátum.DayOfWeek, EredetiSorszám = óraszám, ÚjÓra = tanár == "elmarad" ? null : new Óra { Azonosító = óraaz, Csoportok = new string[] { csoport }, Terem = terem, Tanár = new Tanár { Név = tanár } }, ÚjNap = újnap, ÚjSorszám = újsorszám };
+                        var helyettesítés = new Helyettesítés { EredetiNap = dátum.DayOfWeek, EredetiSorszám = óraszám, ÚjÓra = tanár == "elmarad" ? null : new Óra { Azonosító = óraaz, Csoportok = new string[] { csoport }, Terem = terem, Tanár = new Tanár { Név = tanár }, TeljesNév = óranév }, ÚjNap = újnap, ÚjSorszám = újsorszám };
                         órarend.Helyettesítések.Add(helyettesítés);
                     }
                 }
+                ÓrarendMentés(s);
             });
         }
 
