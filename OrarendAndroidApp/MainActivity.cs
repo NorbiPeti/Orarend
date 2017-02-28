@@ -8,7 +8,6 @@ using Android.OS;
 using Orarend;
 using System.Linq;
 using Android.Graphics;
-using Java.Lang;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Threading;
@@ -22,6 +21,7 @@ namespace OrarendAndroidApp
     {
         private Handler handler;
         private Órarend órarend;
+        private Timer timer;
 
         private const int EDIT_ADD_ACT_REQUEST = 1;
 
@@ -34,12 +34,13 @@ namespace OrarendAndroidApp
             handler = new Handler();
             string[] list = FileList();
             if (list.Contains("beallitasok"))
-                API.BeállításBetöltés(OpenFileInput("beallitasok"));
+                API.BeállításBetöltés(OpenFileInput("beallitasok"), e => Hiba("Hiba a beállítások betöltése során!\n" + e));
             if (list.Contains("orarend") && API.Órarendek.Count == 0)
-                API.ÓrarendBetöltés(OpenFileInput("orarend"));
+                API.ÓrarendBetöltés(OpenFileInput("orarend"), e => Hiba("Hiba az órarendek betöltése során!\n" + e));
             if (list.Contains("osztaly") && API.Osztályok == null)
-                API.OsztályBetöltés(OpenFileInput("osztaly"));
-            var timer = new Timer(CsengőTimer, null, new TimeSpan(0, 0, 1), new TimeSpan(0, 0, 1));
+                API.OsztályBetöltés(OpenFileInput("osztaly"), e => Hiba("Hiba az osztályok betöltése során!\n" + e));
+            timer = new Timer(CsengőTimer, null, new TimeSpan(0, 0, 1), new TimeSpan(0, 0, 1));
+            frissítésHa1ÓraEltelt();
         }
 
         private void órarendlistafrissítés()
@@ -88,35 +89,57 @@ namespace OrarendAndroidApp
             tr1.AddView(textview);
         }
 
-        private void HelyettesítésFrissítés()
+        private void HelyettesítésFrissítés(bool internethiba = true)
         {
             var bar = FindViewById<ProgressBar>(Resource.Id.progressBar1);
-            handler.Post(() => bar.Visibility = ViewStates.Visible);
+            var menu = FindViewById<ActionMenuView>(Resource.Id.actionMenuView1);
+            Action loadstart = () =>
+             {
+                 bar.Visibility = ViewStates.Visible;
+                 menu.Enabled = false;
+             };
+            handler.Post(loadstart);
             API.HelyettesítésFrissítés(OpenFileOutput("orarend", FileCreationMode.Private)).ContinueWith(t =>
             {
+                handler.RemoveCallbacks(loadstart);
                 handler.Post(() =>
                 {
-                    TaskHiba(t);
                     bar.Visibility = ViewStates.Gone;
-                    órarendfrissítés();
-                    Toast.MakeText(this, "Helyettesítések frissítve", ToastLength.Short).Show();
+                    menu.Enabled = true;
+                    if (TaskHiba(t, internethiba))
+                    {
+                        órarendfrissítés();
+                        Toast.MakeText(this, "Helyettesítések frissítve", ToastLength.Short).Show();
+                        utolsófrissítésplusz1óra = DateTime.Now + new TimeSpan(1, 0, 0);
+                    }
                 });
             });
         }
 
         private void ÓrarendFrissítés(Órarend ór = null)
-        { //TODO: Meghívni minden tervezett alkalommal
+        {
             var bar = FindViewById<ProgressBar>(Resource.Id.progressBar1);
-            handler.Post(() => bar.Visibility = ViewStates.Visible);
+            var menu = FindViewById<ActionMenuView>(Resource.Id.actionMenuView1);
+            Action loadstart = () =>
+            {
+                bar.Visibility = ViewStates.Visible;
+                menu.Enabled = false;
+            };
+            handler.Post(loadstart);
             API.Frissítés(OpenFileOutput("orarend", FileCreationMode.Private), OpenFileOutput("osztaly", FileCreationMode.Private), ór).ContinueWith(t =>
             {
+                handler.RemoveCallbacks(loadstart);
                 handler.Post(() =>
                 {
-                    if (TaskHiba(t) && (ór == null || ór == órarend))
-                        órarendfrissítés();
                     bar.Visibility = ViewStates.Gone;
                     órarendlistafrissítés();
-                    Toast.MakeText(this, "Órarend" + (ór == null ? "ek" : "") + " és osztálylista frissítve", ToastLength.Short).Show();
+                    HelyettesítésFrissítés();
+                    if (TaskHiba(t))
+                    {
+                        if (ór == null || ór == órarend)
+                            órarendfrissítés();
+                        Toast.MakeText(this, (API.Órarendek.Count > 0 ? "Órarend" + (ór == null ? "ek" : "") + " és o" : "O") + "sztálylista frissítve", ToastLength.Short).Show();
+                    }
                 });
             });
         }
@@ -127,8 +150,8 @@ namespace OrarendAndroidApp
         {
             var table = FindViewById<TableLayout>(Resource.Id.tableLayout1);
             deselect();
-            if (table.ChildCount > 1)
-                table.RemoveViews(1, table.ChildCount - 1);
+            if (table.ChildCount > 0)
+                table.RemoveViews(0, table.ChildCount);
             if (órarend == null)
                 return;
             TableRow tr = new TableRow(this);
@@ -153,8 +176,8 @@ namespace OrarendAndroidApp
                     addCell((j + 1).ToString(), Color.Black, tr);
                     for (int i = 0; i < 6; i++)
                     {
-                        var helyettesítés = órarend.Helyettesítések.SingleOrDefault(h => (int)h.EredetiNap - 1 == i && h.EredetiSorszám - 1 == j);
-                        var helyettesítésIde = órarend.Helyettesítések.SingleOrDefault(h => (int)h.ÚjNap - 1 == i && h.ÚjSorszám - 1 == j && h.ÚjÓra != null); //Ha az eredeti óra elmarad, és ide lesz helyezve egy másik, az áthelyezést mutassa
+                        var helyettesítés = órarend.Helyettesítések.FirstOrDefault(h => (int)h.EredetiNap - 1 == i && h.EredetiSorszám - 1 == j);
+                        var helyettesítésIde = órarend.Helyettesítések.FirstOrDefault(h => (int)h.ÚjNap - 1 == i && h.ÚjSorszám - 1 == j && h.ÚjÓra != null); //Ha az eredeti óra elmarad, és ide lesz helyezve egy másik, az áthelyezést mutassa
                         //addCell(helyettesítés?.ÚjÓra?.EgyediNév ?? órarend.Órák[i][j]?.EgyediNév ?? "", helyettesítés == null ? Color.Black : Color.Red, tr, new int[2] { i, j });
                         addCell(helyettesítésIde != null ? helyettesítésIde.ÚjÓra.EgyediNév : helyettesítés != null ? helyettesítés.EredetiNap != helyettesítés.ÚjNap || helyettesítés.EredetiSorszám != helyettesítés.ÚjSorszám ? "Áthelyezve" : helyettesítés.ÚjÓra?.EgyediNév ?? "elmarad" : órarend.Órák[i][j]?.EgyediNév ?? "", helyettesítés == null ? Color.Black : Color.Red, tr, new int[2] { i, j });
                     }
@@ -170,6 +193,7 @@ namespace OrarendAndroidApp
         private void deselect()
         {
             FindViewById<TextView>(Resource.Id.kivoraTV).Visibility = ViewStates.Gone;
+            FindViewById<TextView>(Resource.Id.helyTV).Visibility = ViewStates.Gone;
             selected = null;
         }
 
@@ -188,12 +212,12 @@ namespace OrarendAndroidApp
             Helyettesítés helyettesítésIde = null;
             if (ij != null)
             {
-                helyettesítésInnen = órarend.Helyettesítések.SingleOrDefault(h => (int)h.EredetiNap == ij[0] + 1 && h.EredetiSorszám == ij[1] + 1);
-                helyettesítésIde = órarend.Helyettesítések.SingleOrDefault(h => (int)h.ÚjNap == ij[0] + 1 && h.ÚjSorszám == ij[1] + 1 && h.ÚjÓra != null); //Ha az eredeti óra elmarad, és ide lesz helyezve egy másik, az áthelyezést mutassa
+                helyettesítésInnen = órarend.Helyettesítések.FirstOrDefault(h => (int)h.EredetiNap == ij[0] + 1 && h.EredetiSorszám == ij[1] + 1);
+                helyettesítésIde = órarend.Helyettesítések.FirstOrDefault(h => (int)h.ÚjNap == ij[0] + 1 && h.ÚjSorszám == ij[1] + 1 && h.ÚjÓra != null); //Ha az eredeti óra elmarad, és ide lesz helyezve egy másik, az áthelyezést mutassa
             }
             //if (ij == null || (óra = órarend.Órák[ij[0]][ij[1]] ?? ((helyettesítésIde = órarend.Helyettesítések.SingleOrDefault(h => (int)h.ÚjNap == ij[0] + 1 && h.ÚjSorszám == ij[1] + 1))?.ÚjÓra)) == null)
             if (ij == null || (óra = órarend.Órák[ij[0]][ij[1]] ?? (helyettesítésIde?.ÚjÓra)) == null)
-            { //Ha az óra nincs beállítva, beállítja a helyettesítettre
+            { //Ha az óra nincs beállítva, beállítja a helyettesítettre - TODO: Ne; rejtse el
                 deselect();
                 return;
             }
@@ -205,20 +229,21 @@ namespace OrarendAndroidApp
             + "\nTerem: " + óra.Terem
             + "\nTanár: " + óra.Tanár.Név
             + "\nIdőtartam: " + órarend.Órakezdetek[ij[1]].ToString("hh\\:mm") + "-" + órarend.Órakezdetek[ij[1]].Add(new TimeSpan(0, 45, 0)).ToString("hh\\:mm")
-            + "\nCsoport: " + óra.Csoportok.Aggregate((a, b) => a + ", " + b)
-            + (helyettesítésInnen == null ? ""
+            + "\nCsoport: " + óra.Csoportok.Aggregate((a, b) => a + ", " + b);
+            var hely = FindViewById<TextView>(Resource.Id.helyTV);
+            hely.Text = (helyettesítésInnen == null ? ""
                 : helyettesítésInnen.EredetiNap != helyettesítésInnen.ÚjNap || helyettesítésInnen.EredetiSorszám != helyettesítésInnen.ÚjSorszám
-                ? "\n\nÁthelyezve: innen --> " + Napok[(int)helyettesítésInnen.ÚjNap - 1] + " " + helyettesítésInnen.ÚjSorszám + ". óra"
+                ? "Áthelyezve: innen --> " + Napok[(int)helyettesítésInnen.ÚjNap - 1] + " " + helyettesítésInnen.ÚjSorszám + ". óra"
                     : helyettesítésInnen.ÚjÓra != null && helyettesítésInnen.ÚjÓra != óra
-                        ? "\n\nHelyettesítés:"
+                        ? "Helyettesítés:"
                         + (helyettesítésInnen.ÚjÓra.EgyediNév != óra.EgyediNév ? "\nÓra: " + helyettesítésInnen.ÚjÓra.EgyediNév : "")
                         + (helyettesítésInnen.ÚjÓra.Terem != óra.Terem ? "\nTerem: " + helyettesítésInnen.ÚjÓra.Terem : "")
                         + (helyettesítésInnen.ÚjÓra.Tanár.Név != óra.Tanár.Név ? "\nTanár: " + helyettesítésInnen.ÚjÓra.Tanár.Név : "")
                         + (helyettesítésInnen.ÚjÓra.Csoportok[0] != óra.Csoportok[0] ? "\nCsoport: " + helyettesítésInnen.ÚjÓra.Csoportok.Aggregate((a, b) => a + ", " + b) : "")
-                        : "\n\nAz óra elmarad")
+                        : "Az óra elmarad")
             + (helyettesítésIde == null ? ""
                 : helyettesítésIde.EredetiNap != helyettesítésIde.ÚjNap || helyettesítésIde.EredetiSorszám != helyettesítésIde.ÚjSorszám
-                ? "\n\nÁthelyezve: " + Napok[(int)helyettesítésInnen.EredetiNap - 1] + " " + helyettesítésIde.EredetiSorszám + ". óra --> ide"
+                ? "Áthelyezve: " + Napok[(int)helyettesítésInnen.EredetiNap - 1] + " " + helyettesítésIde.EredetiSorszám + ". óra --> ide"
                     + (helyettesítésIde.ÚjÓra.EgyediNév != óra.EgyediNév ? "\nÓra: " + helyettesítésIde.ÚjÓra.EgyediNév : "")
                     + (helyettesítésIde.ÚjÓra.Terem != óra.Terem ? "\nTerem: " + helyettesítésIde.ÚjÓra.Terem : "")
                     + ((óra.Tanár.Név != (helyettesítésIde.ÚjÓra.Tanár.Név == "" ? órarend.Órák[(int)helyettesítésIde.EredetiNap - 1][helyettesítésIde.EredetiSorszám - 1].Tanár.Név : helyettesítésIde.ÚjÓra.Tanár.Név)) ? "\nTanár: " + (óra.Tanár.Név == "" ? órarend.Órák[(int)helyettesítésIde.EredetiNap - 1][helyettesítésIde.EredetiSorszám - 1].Tanár.Név : helyettesítésIde.ÚjÓra.Tanár.Név) : "") //TODO: A tanár mező üres ("")
@@ -226,6 +251,7 @@ namespace OrarendAndroidApp
                     : "") //Ha a pozicíó nem változott, a fentebbi rész már kiírta az adatait
             ;
             kivora.Visibility = ViewStates.Visible;
+            hely.Visibility = ViewStates.Visible;
         }
 
         public override bool OnCreateOptionsMenu(IMenu menu)
@@ -292,14 +318,18 @@ namespace OrarendAndroidApp
         /// Az összes hibát kiírja, ami a <see cref="Task"/> futása közben keletkezett
         /// </summary>
         /// <param name="t"></param>
+        /// <param name="internethiba">Ha igaz, kiírja a WebException-öket is</param>
         /// <returns>Igaz, ha nem volt hiba</returns>
-        private bool TaskHiba(Task t)
+        private bool TaskHiba(Task t, bool internethiba = true)
         {
             bool ret = true;
-            foreach (var ex in (IEnumerable<System.Exception>)t.Exception?.InnerExceptions ?? new System.Exception[0])
+            foreach (var ex in (IEnumerable<Exception>)t.Exception?.InnerExceptions ?? new Exception[0])
             {
                 if (ex is WebException)
-                    Hiba("Nem sikerült csatlakozni az E-naplóhoz.\n" + ex.Message);
+                {
+                    if (internethiba)
+                        Hiba("Nem sikerült csatlakozni az E-naplóhoz.\n" + ex.Message);
+                }
                 else
                     Hiba(ex.ToString());
                 ret = false;
@@ -391,18 +421,31 @@ namespace OrarendAndroidApp
         {
             base.OnWindowFocusChanged(hasFocus);
             if (!hasFocus)
+            {
+                timer.Change(Timeout.Infinite, Timeout.Infinite);
                 return;
+            }
+            timer.Change(new TimeSpan(0, 0, 0), new TimeSpan(0, 0, 1));
+            frissítésHa1ÓraEltelt();
             MaiNaphozGörgetés();
-            //handler.Post(() => { if ((table.GetChildAt(1) as ViewGroup).GetChildAt((int)x).RequestFocus()) Toast.MakeText(this, "Siker", ToastLength.Short).Show(); else Toast.MakeText(this, "Nem siker", ToastLength.Short).Show(); });
         }
 
         private void MaiNaphozGörgetés()
         {
             var x = DateTime.Today.DayOfWeek == DayOfWeek.Sunday ? DayOfWeek.Monday : DateTime.Today.DayOfWeek;
             var table = FindViewById<TableLayout>(Resource.Id.tableLayout1);
-            if (table.ChildCount <= 1)
+            if (table.ChildCount == 0)
                 return;
-            FindViewById<HorizontalScrollView>(Resource.Id.horizontalView).SmoothScrollTo((table.GetChildAt(1) as ViewGroup).GetChildAt((int)x).Left, 0);
+            var cell = (table.GetChildAt(0) as ViewGroup).GetChildAt((int)x);
+            FindViewById<HorizontalScrollView>(Resource.Id.horizontalView).SmoothScrollTo(Math.Max(cell.Left - (FindViewById(Resource.Id.container).Width - cell.Width) / 2, 0), 0);
+        }
+
+        private DateTime utolsófrissítésplusz1óra = DateTime.MinValue;
+        private void frissítésHa1ÓraEltelt()
+        {
+            if (utolsófrissítésplusz1óra > DateTime.Now)
+                return;
+            HelyettesítésFrissítés(false);
         }
     }
 }

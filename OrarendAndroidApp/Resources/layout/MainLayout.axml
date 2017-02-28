@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/container"
     android:orientation="vertical"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
@@ -20,6 +21,17 @@
             android:minWidth="25px"
             android:minHeight="25px"
             android:id="@+id/scrollLinearLayout">
+            <ProgressBar
+                style="@android:attr/progressBarStyleHorizontal"
+                android:id="@+id/progressBar1"
+                android:indeterminateTint="#00ffffff"
+                android:indeterminate="true"
+                android:indeterminateBehavior="repeat"
+                android:indeterminateOnly="true"
+                android:indeterminateTintMode="add"
+                android:layout_height="wrap_content"
+                android:layout_width="match_parent"
+                android:visibility="gone" />
             <ScrollView
                 android:id="@+id/ScrollView01"
                 android:layout_height="wrap_content"
@@ -39,17 +51,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:stretchColumns="1"
-                        android:isScrollContainer="true">
-                        <ProgressBar
-                            style="@android:attr/progressBarStyleHorizontal"
-                            android:id="@+id/progressBar1"
-                            android:indeterminateTint="#00ffffff"
-                            android:indeterminate="true"
-                            android:indeterminateBehavior="repeat"
-                            android:indeterminateOnly="true"
-                            android:indeterminateTintMode="add"
-                            android:visibility="gone" />
-                    </TableLayout>
+                        android:isScrollContainer="true" />
                 </HorizontalScrollView>
             </ScrollView>
             <TextView
@@ -60,6 +62,15 @@
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:visibility="gone" />
+            <TextView
+                android:id="@+id/helyTV"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Helyettesítés"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                android:textColor="#FF0000" />
             <TextView
                 android:id="@+id/kezdvegTV"
                 android:text="Betöltés"
