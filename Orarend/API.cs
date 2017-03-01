@@ -23,10 +23,10 @@ namespace Orarend
         public static Settings Beállítások { get; private set; } = new Settings();
         /// <summary>
         /// Frissíti az osztálylistát és az eredeti órarendet, első megnyitásnál, és egy órarend hozzáadásánál/szerkesztésénél, majd hetente elegendő meghívni
-        /// <param name="órarendstream">A file stream, ahova mentse az adatokat, hogy ne kelljen külön meghívni</param>
-        /// <param name="osztálystream">A file stream, ahova mentse az adatokat, hogy ne kelljen külön meghívni</param>
+        /// <param name="órarendstream">A file stream, ahova mentse az adatokat, hogy ne kelljen külön meghívni - Azért funkció, hogy elkerüljök az adatvesztést, mivel így csak a mentéskor nyitja meg</param>
+        /// <param name="osztálystream">A file stream, ahova mentse az adatokat, hogy ne kelljen külön meghívni - Azért funkció, hogy elkerüljök az adatvesztést, mivel így csak a mentéskor nyitja meg</param>
         /// </summary>
-        public static async Task Frissítés(Stream órarendstream, Stream osztálystream, Órarend ór = null)
+        public static async Task Frissítés(Func<Stream> órarendstream, Func<Stream> osztálystream, Órarend ór = null)
         {
             try
             {
@@ -118,16 +118,16 @@ namespace Orarend
             }
             finally
             {
-                ÓrarendMentés(órarendstream);
-                OsztályMentés(osztálystream);
+                ÓrarendMentés(órarendstream());
+                OsztályMentés(osztálystream());
             }
         }
 
         /// <summary>
         /// Frissíti a helyettesítéseket, naponta, indításkor vagy gombnyommásra frissítse (minden nap az első előtérbe kerüléskor)
-        /// <param name="s">A file stream, ahova mentse az ÓRARENDEKET, hogy ne kelljen külön meghívni</param>
+        /// <param name="órarendstream">A file stream, ahova mentse az ÓRARENDEKET, hogy ne kelljen külön meghívni - Azért funkció, hogy elkerüljök az adatvesztést, mivel így csak a mentéskor nyitja meg</param>
         /// </summary>
-        public static async Task HelyettesítésFrissítés(Stream s)
+        public static async Task HelyettesítésFrissítés(Func<Stream> órarendstream)
         {
             if (Órarendek.Count == 0 || Osztályok.Length == 0)
                 return;
@@ -151,25 +151,33 @@ namespace Orarend
                             if (hét != Hét)
                                 continue;
                             byte óraszám = byte.Parse(node.ChildNodes[1].InnerText);
-                            Osztály osztály = Osztályok.Single(o => o.Azonosító.Contains(node.ChildNodes[2].InnerText));
-                            string csoport = node.ChildNodes[3].InnerText;
-                            string óraaz = node.ChildNodes[4].InnerText;
-                            string terem = node.ChildNodes[5].InnerText.Split(new string[] { " -> " }, StringSplitOptions.None).Last(); //Mindig az új termet tárolja el, ha változott
-                        string tanár = node.ChildNodes[7].InnerText;
-                            string[] megj = node.ChildNodes[8].InnerText.Split(' ');
-                            string óranév = node.ChildNodes[9].InnerText;
-                            DayOfWeek újnap = dátum.DayOfWeek;
-                            byte újsorszám = óraszám;
-                            if (megj.Length > 2)
+                            var osztályok = node.ChildNodes[2].InnerText.Split(new string[] { ", " }, StringSplitOptions.None);
+                            foreach (string osztálynév in osztályok)
                             {
-                                újnap = DateTime.Parse(megj[1]).DayOfWeek;
-                                újsorszám = byte.Parse(megj[3].Trim('.'));
-                            }
-                            foreach (var órarend in (csoport == "Egész osztály" ? Órarendek : Órarendek.Where(ór => ór.Csoportok.Contains(csoport))).Where(ór => ór.Osztály == osztály))
-                        //foreach (var órarend in Órarendek.Where(ór => ór.Osztály == osztály && (csoport == "Egész osztály" || ór.Csoportok.Contains(csoport)))) - A probléma valószínűleg a referencia változások miatt volt, a serialization miatt, és hogy alapból nem a .Equals-ot futtatja le ==-kor
-                        {
-                                var helyettesítés = new Helyettesítés { EredetiNap = dátum.DayOfWeek, EredetiSorszám = óraszám, ÚjÓra = tanár == "elmarad" ? null : new Óra { Azonosító = óraaz, Csoportok = new string[] { csoport }, Terem = terem, Tanár = new Tanár { Név = tanár }, TeljesNév = óranév }, ÚjNap = újnap, ÚjSorszám = újsorszám };
-                                órarend.Helyettesítések.Add(helyettesítés);
+                                Osztály osztály = Osztályok.Single(o => o.Azonosító.Contains(osztálynév));
+                                var csoportok = node.ChildNodes[3].InnerText;
+                                int névindex= csoportok.IndexOf(osztálynév);
+                                int végeindex = csoportok.IndexOf(")", névindex >= 0 ? névindex : 0);
+                                string csoport = osztályok.Length == 1 ? csoportok : csoportok.Substring(névindex + osztálynév.Length + 1, végeindex - névindex - osztálynév.Length - 1);
+                                string óraaz = node.ChildNodes[4].InnerText;
+                                string terem = node.ChildNodes[5].InnerText.Split(new string[] { " -> " }, StringSplitOptions.None).Last(); //Mindig az új termet tárolja el, ha változott
+                                string tanár = node.ChildNodes[7].InnerText;
+                                string[] megj = node.ChildNodes[8].InnerText.Split(' ');
+                                string óranév = node.ChildNodes[9].InnerText;
+                                DayOfWeek újnap = dátum.DayOfWeek;
+                                byte újsorszám = óraszám;
+                                if (megj.Length > 2)
+                                {
+                                    újnap = DateTime.Parse(megj[1]).DayOfWeek;
+                                    újsorszám = byte.Parse(megj[3].Trim('.'));
+                                }
+                                foreach (var órarend in (csoport == "Egész osztály" ? Órarendek : Órarendek.Where(ór => ór.Csoportok.Contains(csoport))).Where(ór => ór.Osztály == osztály))
+                                {
+                                    if (tanár == "")
+                                        tanár = órarend.Órák[(int)dátum.DayOfWeek - 1][óraszám - 1]?.Tanár.Név ?? "";
+                                    var helyettesítés = new Helyettesítés { EredetiNap = dátum.DayOfWeek, EredetiSorszám = óraszám, ÚjÓra = tanár == "elmarad" ? null : new Óra { Azonosító = óraaz, Csoportok = new string[] { csoport }, Terem = terem, Tanár = new Tanár { Név = tanár }, TeljesNév = óranév }, ÚjNap = újnap, ÚjSorszám = újsorszám };
+                                    órarend.Helyettesítések.Add(helyettesítés);
+                                }
                             }
                         }
                     }
@@ -177,7 +185,7 @@ namespace Orarend
             }
             finally
             {
-                ÓrarendMentés(s);
+                ÓrarendMentés(órarendstream());
             }
         }
         

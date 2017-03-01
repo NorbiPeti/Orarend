@@ -25,17 +25,17 @@ namespace Orarend
 
         public bool Equals(Osztály other)
         {
-            return Azonosító == other.Azonosító;
+            return Azonosító == other?.Azonosító;
         }
 
         public static bool operator==(Osztály a, Osztály b)
         {
-            return a.Equals(b);
+            return a?.Equals(b) ?? (object)b == null;
         }
 
         public static bool operator!=(Osztály a, Osztály b)
         {
-            return !a.Equals(b);
+            return !(a == b);
         }
 
         public override bool Equals(object obj)
