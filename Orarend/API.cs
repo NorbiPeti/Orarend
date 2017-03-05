@@ -60,7 +60,6 @@ namespace Orarend
                               {
                                   Osztályok = doc.GetElementbyId("uok").ChildNodes.Where(node => node.HasAttributes).Select(node => new Osztály { Azonosító = node.GetAttributeValue("value", ""), Név = node.NextSibling.InnerText }).ToArray();
                                   bool ahét = true;
-                                  var órák = (ahét ? órarend.ÓrákAHét : órarend.ÓrákBHét);
                                   foreach (var node in doc.GetElementbyId("oda").FirstChild.FirstChild.ChildNodes[1].ChildNodes)
                                   {
                                       switch (node.FirstChild.InnerText)
@@ -75,6 +74,7 @@ namespace Orarend
                                               {
                                                   int x = int.Parse(node.FirstChild.InnerText) - 1;
                                                   órarend.Órakezdetek[x] = TimeSpan.Parse(node.FirstChild.Attributes["title"].Value.Split('-')[0].Trim());
+                                                  var órák = (ahét ? órarend.ÓrákAHét : órarend.ÓrákBHét);
                                                   for (int i = 0; i < 5; i++) //Napok
                                                   {
                                                       var óranode = node.ChildNodes[i + 1].FirstChild;
