@@ -60,6 +60,7 @@ namespace Orarend
                               {
                                   Osztályok = doc.GetElementbyId("uok").ChildNodes.Where(node => node.HasAttributes).Select(node => new Osztály { Azonosító = node.GetAttributeValue("value", ""), Név = node.NextSibling.InnerText }).ToArray();
                                   bool ahét = true;
+                                  var órák = (ahét ? órarend.ÓrákAHét : órarend.ÓrákBHét);
                                   foreach (var node in doc.GetElementbyId("oda").FirstChild.FirstChild.ChildNodes[1].ChildNodes)
                                   {
                                       switch (node.FirstChild.InnerText)
@@ -77,19 +78,22 @@ namespace Orarend
                                                   for (int i = 0; i < 5; i++) //Napok
                                                   {
                                                       var óranode = node.ChildNodes[i + 1].FirstChild;
-                                                      var óra = (ahét ? órarend.ÓrákAHét : órarend.ÓrákBHét)[i][x];
+                                                      var óra = órák[i][x];
                                                       if (óranode.ChildNodes.Count == 0)
+                                                      {
+                                                          órák[i][x] = null;
                                                           continue;
+                                                      }
                                                       for (int j = 0; j < óranode.ChildNodes.Count; j += 6)
                                                       {
                                                           var csoport = óranode.ChildNodes[j].InnerText.TrimEnd(':');
                                                           if (csoport != "Egész osztály" && !órarend.Csoportok.Contains(csoport))
                                                           {
-                                                              órarend.Órák[i][x] = null;
+                                                              órák[i][x] = null;
                                                               continue;
                                                           }
                                                           if (óra == null)
-                                                              (ahét ? órarend.ÓrákAHét : órarend.ÓrákBHét)[i][x] = óra = new Óra();
+                                                              órák[i][x] = óra = new Óra();
                                                           óra.Csoportok = new string[] { csoport }; //Az állandó órarendben osztályonként csak egy csoport van egy órán
                                                           óra.Azonosító = óranode.ChildNodes[j + 2].InnerText;
                                                           óra.TeljesNév = óranode.ChildNodes[j + 2].Attributes["title"].Value;
