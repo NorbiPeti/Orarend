@@ -39,7 +39,7 @@ namespace OrarendAndroidApp
                 API.ÓrarendBetöltés(OpenFileInput("orarend"), e => Hiba("Hiba az órarendek betöltése során!\n" + e));
             if (list.Contains("osztaly") && API.Osztályok == null)
                 API.OsztályBetöltés(OpenFileInput("osztaly"), e => Hiba("Hiba az osztályok betöltése során!\n" + e));
-            timer = new Timer(CsengőTimer, null, new TimeSpan(0, 0, 1), new TimeSpan(0, 0, 1));
+            timer = new Timer(CsengőTimer, null, new TimeSpan(0, 0, 0), new TimeSpan(0, 0, 5));
         }
 
         private void órarendlistafrissítés()
@@ -198,7 +198,7 @@ namespace OrarendAndroidApp
         }
 
         private Helyettesítés[] helyettesítésInnenIde(int i, int j)
-        {
+        { //TODO: API-ba
             return new Helyettesítés[]
                 {
             órarend.Helyettesítések.FirstOrDefault(h => (int)h.EredetiNap == i + 1 && h.EredetiSorszám == j + 1),
@@ -359,7 +359,7 @@ namespace OrarendAndroidApp
                     return;
                 }
                 var most = DateTime.Now - DateTime.Today;
-                //var most = new TimeSpan(8, 10, 0);
+                //var most = new TimeSpan(13, 46, 0);
                 bool talált = false;
                 var kovora = FindViewById<TextView>(Resource.Id.kovoraTV);
                 nincstöbbóra = false;
@@ -373,38 +373,34 @@ namespace OrarendAndroidApp
                 {
                     var vége = órarend.Órakezdetek[i].Add(new TimeSpan(0, 45, 0));
                     bool becsengetés;
-                    if (most > órarend.Órakezdetek[i])
-                    {
-                        if (most < vége)
-                        {
-                            kezdveg.Text = "Kicsengetés: " + (vége - most).ToString("hh\\:mm\\:ss");
-                            talált = true;
-                            becsengetés = false;
-                        }
-                        else
-                            continue;
-                    }
-                    else
-                    {
-                        kezdveg.Text = "Becsengetés: " + (órarend.Órakezdetek[i] - most).ToString("hh\\:mm\\:ss");
-                        talált = true;
-                        kovora.Visibility = ViewStates.Invisible;
-                        becsengetés = true;
-                    }
-                    int x = (int)DateTime.Today.DayOfWeek - 1;
+                    //int x = (int)DateTime.Today.DayOfWeek - 2; //TODO: TMP
+                    int x = (int)DateTime.Today.DayOfWeek - 1; //TODO: A mai nap és ez az egész az API-ba
                     Óra óra;
                     var innenide = helyettesítésInnenIde(x, i);
                     if (x != -1 && x < 6 && (óra = innenide[1] != null ? innenide[1].ÚjÓra : innenide[0] != null ? innenide[0].EredetiNap != innenide[0].ÚjNap || innenide[0].EredetiSorszám != innenide[0].ÚjSorszám ? null : innenide[0].ÚjÓra : órarend.Órák[x][i]) != null)
                     { //-1: Vasárnap
+                        if (most > órarend.Órakezdetek[i])
+                        {
+                            if (most < vége)
+                            {
+                                kezdveg.Text = "Kicsengetés: " + (vége - most).ToString("hh\\:mm\\:ss");
+                                talált = true;
+                                becsengetés = false;
+                            }
+                            else
+                                continue;
+                        }
+                        else
+                        {
+                            kezdveg.Text = "Becsengetés: " + (órarend.Órakezdetek[i] - most).ToString("hh\\:mm\\:ss");
+                            talált = true;
+                            becsengetés = true;
+                        }
                         kovora.Text = (becsengetés ? "Következő" : "Jelenlegi") + " óra: " + óra.EgyediNév + "\n" + óra.Terem + "\n" + óra.Tanár.Név + "\n" + óra.Csoportok.Aggregate((a, b) => a + ", " + b);
                         kovora.Visibility = ViewStates.Visible;
                         kezdveg.Visibility = ViewStates.Visible;
+                        nincstöbbóra = false;
                         break;
-                    }
-                    else
-                    {
-                        kovora.Visibility = ViewStates.Invisible;
-                        kezdveg.Visibility = ViewStates.Invisible;
                     }
                 }
                 if (!talált)
@@ -443,13 +439,14 @@ namespace OrarendAndroidApp
                 timer.Change(Timeout.Infinite, Timeout.Infinite);
                 return;
             }
-            timer.Change(new TimeSpan(0, 0, 0), new TimeSpan(0, 0, 1));
+            timer.Change(new TimeSpan(0, 0, 0), new TimeSpan(0, 0, 5));
             frissítésHa1ÓraEltelt();
             MaiNaphozGörgetés();
         }
 
         private void MaiNaphozGörgetés()
         {
+            //var x = DateTime.Today.DayOfWeek - 1; //TODO: TMP
             var x = DateTime.Today.DayOfWeek;
             if (nincstöbbóra) x++;
             x = x == DayOfWeek.Sunday ? DayOfWeek.Monday : x;

@@ -31,7 +31,7 @@
         <Spinner
             android:layout_column="1"
             android:id="@+id/osztálySpinner"
-            android:layout_width="fill_parent" />
+            android:layout_width="500dp" />
     </TableRow>
     <TableRow>
         <TextView
