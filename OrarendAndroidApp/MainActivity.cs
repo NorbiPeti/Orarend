@@ -24,6 +24,7 @@ namespace OrarendAndroidApp
         private Timer timer;
 
         private const int EDIT_ADD_ACT_REQUEST = 1;
+        public const string DATA_FILENAME = "data.json";
 
         protected override void OnCreate(Bundle bundle)
         {
@@ -33,12 +34,8 @@ namespace OrarendAndroidApp
             ActionBar.CustomView = FindViewById<Spinner>(Resource.Id.spinner);
             handler = new Handler();
             string[] list = FileList();
-            if (list.Contains("beallitasok"))
-                API.BeállításBetöltés(OpenFileInput("beallitasok"), e => Hiba("Hiba a beállítások betöltése során!\n" + e));
-            if (list.Contains("orarend") && API.Órarendek.Count == 0)
-                API.ÓrarendBetöltés(OpenFileInput("orarend"), e => Hiba("Hiba az órarendek betöltése során!\n" + e));
-            if (list.Contains("osztaly") && API.Osztályok == null)
-                API.OsztályBetöltés(OpenFileInput("osztaly"), e => Hiba("Hiba az osztályok betöltése során!\n" + e));
+            if (list.Contains(DATA_FILENAME))
+                API.Betöltés(OpenFileInput(DATA_FILENAME), e => Hiba("Hiba az adatok betöltése során!\n" + e));
             timer = new Timer(CsengőTimer, null, new TimeSpan(0, 0, 0), new TimeSpan(0, 0, 5));
         }
 
@@ -98,7 +95,7 @@ namespace OrarendAndroidApp
                  menu.Enabled = false;
              };
             handler.Post(loadstart);
-            API.HelyettesítésFrissítés(() => OpenFileOutput("orarend", FileCreationMode.Private)).ContinueWith(t =>
+            API.HelyettesítésFrissítés(() => OpenFileOutput(DATA_FILENAME, FileCreationMode.Private)).ContinueWith(t =>
             {
                 handler.RemoveCallbacks(loadstart);
                 handler.Post(() =>
@@ -125,7 +122,7 @@ namespace OrarendAndroidApp
                 menu.Enabled = false;
             };
             handler.Post(loadstart);
-            API.Frissítés(() => OpenFileOutput("orarend", FileCreationMode.Private), () => OpenFileOutput("osztaly", FileCreationMode.Private), ór).ContinueWith(t =>
+            API.Frissítés(() => OpenFileOutput(DATA_FILENAME, FileCreationMode.Private), ór).ContinueWith(t =>
               {
                   handler.RemoveCallbacks(loadstart);
                   handler.Post(() =>
@@ -225,21 +222,26 @@ namespace OrarendAndroidApp
                 helyettesítésInnen = innenide[0];
                 helyettesítésIde = innenide[1];
             }
-            //if (ij == null || (óra = órarend.Órák[ij[0]][ij[1]] ?? ((helyettesítésIde = órarend.Helyettesítések.SingleOrDefault(h => (int)h.ÚjNap == ij[0] + 1 && h.ÚjSorszám == ij[1] + 1))?.ÚjÓra)) == null)
-            if (ij == null || (óra = órarend.Órák[ij[0]][ij[1]] ?? (helyettesítésIde?.ÚjÓra)) == null)
-            { //Ha az óra nincs beállítva, beállítja a helyettesítettre - TODO: Ne; rejtse el
+            if (ij == null || (óra = órarend.Órák[ij[0]][ij[1]]) == null && helyettesítésIde?.ÚjÓra == null)
+            {
                 deselect();
                 return;
             }
             tv.SetBackgroundResource(Resource.Drawable.cell_shape_selected_light);
             selected = tv;
             var kivora = FindViewById<TextView>(Resource.Id.kivoraTV);
-            kivora.Text = Napok[ij[0]] + " " + (ij[1] + 1) + ". óra"
-            + "\nNév: " + óra.TeljesNév
-            + "\nTerem: " + óra.Terem
-            + "\nTanár: " + óra.Tanár.Név
-            + "\nIdőtartam: " + órarend.Órakezdetek[ij[1]].ToString("hh\\:mm") + "-" + órarend.Órakezdetek[ij[1]].Add(new TimeSpan(0, 45, 0)).ToString("hh\\:mm")
-            + "\nCsoport: " + óra.Csoportok.Aggregate((a, b) => a + ", " + b);
+            if (óra == null)
+                kivora.Visibility = ViewStates.Gone;
+            else
+            {
+                kivora.Text = Napok[ij[0]] + " " + (ij[1] + 1) + ". óra"
+                + "\nNév: " + óra.TeljesNév
+                + "\nTerem: " + óra.Terem
+                + "\nTanár: " + óra.Tanár.Név
+                + "\nIdőtartam: " + órarend.Órakezdetek[ij[1]].ToString("hh\\:mm") + "-" + órarend.Órakezdetek[ij[1]].Add(new TimeSpan(0, 45, 0)).ToString("hh\\:mm")
+                + "\nCsoport: " + óra.Csoportok.Aggregate((a, b) => a + ", " + b);
+                kivora.Visibility = ViewStates.Visible;
+            }
             var hely = FindViewById<TextView>(Resource.Id.helyTV);
             hely.Text = (helyettesítésInnen == null ? ""
                 : helyettesítésInnen.EredetiNap != helyettesítésInnen.ÚjNap || helyettesítésInnen.EredetiSorszám != helyettesítésInnen.ÚjSorszám
@@ -253,14 +255,13 @@ namespace OrarendAndroidApp
                         : "Az óra elmarad")
             + (helyettesítésIde == null ? ""
                 : helyettesítésIde.EredetiNap != helyettesítésIde.ÚjNap || helyettesítésIde.EredetiSorszám != helyettesítésIde.ÚjSorszám
-                ? "Áthelyezve: " + Napok[(int)helyettesítésInnen.EredetiNap - 1] + " " + helyettesítésIde.EredetiSorszám + ". óra --> ide"
-                    + (helyettesítésIde.ÚjÓra.EgyediNév != óra.EgyediNév ? "\nÓra: " + helyettesítésIde.ÚjÓra.EgyediNév : "")
-                    + (helyettesítésIde.ÚjÓra.Terem != óra.Terem ? "\nTerem: " + helyettesítésIde.ÚjÓra.Terem : "")
-                    + ((óra.Tanár.Név != (helyettesítésIde.ÚjÓra.Tanár.Név == "" ? órarend.Órák[(int)helyettesítésIde.EredetiNap - 1][helyettesítésIde.EredetiSorszám - 1].Tanár.Név : helyettesítésIde.ÚjÓra.Tanár.Név)) ? "\nTanár: " + (óra.Tanár.Név == "" ? órarend.Órák[(int)helyettesítésIde.EredetiNap - 1][helyettesítésIde.EredetiSorszám - 1].Tanár.Név : helyettesítésIde.ÚjÓra.Tanár.Név) : "")
-                    + (helyettesítésIde.ÚjÓra.Csoportok[0] != óra.Csoportok[0] ? "\nCsoport: " + helyettesítésIde.ÚjÓra.Csoportok.Aggregate((a, b) => a + ", " + b) : "") //ˇˇ De ha változott, akkor nem
+                ? "Áthelyezve: " + Napok[(int)helyettesítésIde.EredetiNap - 1] + " " + helyettesítésIde.EredetiSorszám + ". óra --> ide"
+                    + (helyettesítésIde.ÚjÓra.EgyediNév != óra?.EgyediNév ? "\nÓra: " + helyettesítésIde.ÚjÓra.EgyediNév : "")
+                    + (helyettesítésIde.ÚjÓra.Terem != óra?.Terem ? "\nTerem: " + helyettesítésIde.ÚjÓra.Terem : "")
+                    + ((óra?.Tanár.Név != (helyettesítésIde.ÚjÓra.Tanár.Név == "" ? órarend.Órák[(int)helyettesítésIde.EredetiNap - 1][helyettesítésIde.EredetiSorszám - 1].Tanár.Név : helyettesítésIde.ÚjÓra.Tanár.Név)) ? "\nTanár: " + (óra?.Tanár.Név == "" ? órarend.Órák[(int)helyettesítésIde.EredetiNap - 1][helyettesítésIde.EredetiSorszám - 1].Tanár.Név : helyettesítésIde.ÚjÓra.Tanár.Név) : "")
+                    + (helyettesítésIde.ÚjÓra.Csoportok[0] != óra?.Csoportok[0] ? "\nCsoport: " + helyettesítésIde.ÚjÓra.Csoportok.Aggregate((a, b) => a + ", " + b) : "") //ˇˇ De ha változott, akkor nem
                     : "") //Ha a pozicíó nem változott, a fentebbi rész már kiírta az adatait
             ;
-            kivora.Visibility = ViewStates.Visible;
             hely.Visibility = ViewStates.Visible;
         }
 
@@ -373,7 +374,6 @@ namespace OrarendAndroidApp
                 {
                     var vége = órarend.Órakezdetek[i].Add(new TimeSpan(0, 45, 0));
                     bool becsengetés;
-                    //int x = (int)DateTime.Today.DayOfWeek - 2; //TODO: TMP
                     int x = (int)DateTime.Today.DayOfWeek - 1; //TODO: A mai nap és ez az egész az API-ba
                     Óra óra;
                     var innenide = helyettesítésInnenIde(x, i);
@@ -446,10 +446,9 @@ namespace OrarendAndroidApp
 
         private void MaiNaphozGörgetés()
         {
-            //var x = DateTime.Today.DayOfWeek - 1; //TODO: TMP
             var x = DateTime.Today.DayOfWeek;
             if (nincstöbbóra) x++;
-            x = x == DayOfWeek.Sunday ? DayOfWeek.Monday : x;
+            x = x > DayOfWeek.Saturday || x == DayOfWeek.Sunday ? DayOfWeek.Monday : x;
             var table = FindViewById<TableLayout>(Resource.Id.tableLayout1);
             if (table.ChildCount == 0)
                 return;

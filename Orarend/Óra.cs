@@ -10,7 +10,6 @@ namespace Orarend
     [DataContract]
     public class Óra
     {
-        [DataMember]
         private ÓraTípus Típus { get; set; }
         [DataMember]
         public Tanár Tanár { get; set; }
@@ -21,7 +20,8 @@ namespace Orarend
         /// </summary>
         [DataMember]
         public string[] Csoportok { get; set; }
-        
+     
+        [DataMember]
         public string Azonosító
         {
             get

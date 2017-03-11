@@ -67,7 +67,7 @@ namespace OrarendAndroidApp
             intent.PutExtra("deleted", true);
             ((AlertDialog)s).Dismiss();
             ((AlertDialog)s).Dispose();
-            API.ÓrarendMentés(OpenFileOutput("orarend", FileCreationMode.Private));
+            API.Mentés(OpenFileOutput(MainActivity.DATA_FILENAME, FileCreationMode.Private));
             SetResult(Result.Ok, intent);
             Finish();
         }).SetNegativeButton("Nem", (s, ea) =>
@@ -91,7 +91,7 @@ namespace OrarendAndroidApp
             }
             else
                 API.Órarendek.Add(new Órarend(név, osztály, csoportok));
-            API.ÓrarendMentés(OpenFileOutput("orarend", FileCreationMode.Private));
+            API.Mentés(OpenFileOutput(MainActivity.DATA_FILENAME, FileCreationMode.Private));
             SetResult(Result.Ok, Intent);
             Finish();
         }
