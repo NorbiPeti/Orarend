@@ -14,8 +14,8 @@ namespace Orarend
 {
     [DataContract]
     public class API
-    { //TODO: Beállítások: Téma (sötét, világos) (Android; platformfüggő beállítások), Előre megadott egyedi nevek használata
-        internal static API példány = new API();
+    { //TODO: Előre megadott egyedi nevek használata
+        internal static API példány = new API(); //TODO: FrissítésHa1ÓraEltelt() mentés
         private API()
         {
         }
@@ -28,7 +28,7 @@ namespace Orarend
         public Osztály[] osztályok { get; private set; }
         [DataMember(Order = 2)]
         public List<Órarend> órarendek { get; private set; } = new List<Órarend>();
-        [DataMember]
+        //[DataMember]
         public Settings beállítások { get; private set; } = new Settings();
         /// <summary>
         /// <para>Visszatér az osztályok listájával.</para>

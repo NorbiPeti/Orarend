@@ -7,13 +7,9 @@ using System.Threading.Tasks;
 
 namespace Orarend
 {
-    [DataContract]
+    [DataContract] //
     public class Settings
     {
-        [DataMember]
-        public bool DarkTheme { get; set; }
-        [DataMember]
-        public TimeSpan Difference { get; set; } //TODO
         public void UseCommonNames()
         {
             set("mateme", "Matek");

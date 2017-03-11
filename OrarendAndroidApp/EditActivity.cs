@@ -11,11 +11,12 @@ using Android.Views;
 using Android.Widget;
 using Orarend;
 using Android.Graphics;
+using Android.Preferences;
 
 namespace OrarendAndroidApp
 {
     [Activity(Label = "AddActivity", Theme = "@android:style/Theme.Holo.Light")]
-    public class EditActivity : Activity
+    public class EditActivity : ActivityBase
     {
         private bool add;
         private int index;
