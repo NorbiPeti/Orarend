@@ -140,10 +140,10 @@ namespace Orarend
         /// Frissíti a helyettesítéseket, naponta, indításkor vagy gombnyommásra frissítse (minden nap az első előtérbe kerüléskor)
         /// <param name="stream">A file stream, ahova mentse az adatokat, hogy ne kelljen külön meghívni - Azért funkció, hogy elkerüljök az adatvesztést, mivel így csak a mentéskor nyitja meg</param>
         /// </summary>
-        public static async Task HelyettesítésFrissítés(Func<Stream> stream)
+        public static async Task<bool> HelyettesítésFrissítés(Func<Stream> stream)
         {
             if (Órarendek.Count == 0 || Osztályok.Length == 0)
-                return;
+                return false;
             HtmlDocument doc = new HtmlDocument();
             var req = WebRequest.CreateHttp("http://deri.enaplo.net/ajax/print/htlista.php");
             var resp = await req.GetResponseAsync();
@@ -194,6 +194,7 @@ namespace Orarend
                 }
                 Mentés(stream());
             });
+            return true;
         }
 
         [OnDeserializing]
@@ -226,6 +227,7 @@ namespace Orarend
                         catch (Exception e)
                         {
                             hibánál(e);
+                            példány = new API();
                         }
                     }
                 }

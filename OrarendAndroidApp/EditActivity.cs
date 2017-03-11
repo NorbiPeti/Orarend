@@ -45,6 +45,8 @@ namespace OrarendAndroidApp
                 osztálySpinner.SetSelection(ix);
                 FindViewById<EditText>(Resource.Id.csoportokEditText).Text = órarend.Csoportok.Aggregate((a, b) => a + " " + b);
             }
+            else
+                FindViewById<EditText>(Resource.Id.névEditText).Text = "Órarend";
             osztálySpinner.LayoutParameters = new TableRow.LayoutParams((osztálySpinner.Parent as View)?.Width - (osztálySpinner.Parent as ViewGroup)?.GetChildAt(0)?.Width ?? TableRow.LayoutParams.MatchParent, TableRow.LayoutParams.WrapContent); //TODO
             FindViewById<Button>(Resource.Id.saveButton).Click += SaveButtonClick;
             var deleteButton = FindViewById<Button>(Resource.Id.deleteButton);

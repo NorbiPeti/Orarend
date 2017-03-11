@@ -42,7 +42,7 @@ namespace OrarendAndroidApp
             handler = new Handler();
             string[] list = FileList();
             if (list.Contains(DATA_FILENAME))
-                API.Betöltés(OpenFileInput(DATA_FILENAME), e => Hiba("Hiba az adatok betöltése során!\n" + e));
+                API.Betöltés(OpenFileInput(DATA_FILENAME), e => Hiba("Hiba az adatok betöltése során!\n" + e)); //TODO: Release módban előfordul <--
             timer = new Timer(CsengőTimer, null, new TimeSpan(0, 0, 0), new TimeSpan(0, 0, 5));
         }
 
@@ -119,7 +119,8 @@ namespace OrarendAndroidApp
                     if (TaskHiba(t, internethiba))
                     {
                         órarendfrissítés();
-                        Toast.MakeText(this, "Helyettesítések frissítve", ToastLength.Short).Show();
+                        if (t.Result)
+                            Toast.MakeText(this, "Helyettesítések frissítve", ToastLength.Short).Show();
                     }
                     utolsófrissítésplusz1óra = DateTime.Now + new TimeSpan(1, 0, 0); //Mindenképpen állítsa be, hogy ne írja folyamatosan a hibát
                 });
@@ -462,7 +463,7 @@ namespace OrarendAndroidApp
                 Recreate();
             }
         }
-
+        
         public override void OnWindowFocusChanged(bool hasFocus)
         {
             base.OnWindowFocusChanged(hasFocus);
