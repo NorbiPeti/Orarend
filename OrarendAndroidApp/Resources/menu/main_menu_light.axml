@@ -8,7 +8,7 @@
   <item
        android:id="@+id/menu_refresh"
        android:icon="@drawable/ic_autorenew_black_24dp"
-       android:showAsAction="always"
+       android:showAsAction="always"                    
        android:title="Frissítés" />
   <item
        android:id="@+id/menu_add"

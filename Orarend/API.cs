@@ -25,7 +25,7 @@ namespace Orarend
         [DataMember(Order = 1)]
         public Dictionary<string, ÓraTípus> típusok { get; private set; } = new Dictionary<string, ÓraTípus>();
         [DataMember]
-        public Osztály[] osztályok { get; private set; }
+        public Osztály[] osztályok { get; private set; } = new Osztály[0]; //Ez az initializáció csak akkor fut le, ha nem tölti be fájlból
         [DataMember(Order = 2)]
         public List<Órarend> órarendek { get; private set; } = new List<Órarend>();
         //[DataMember]
@@ -212,6 +212,8 @@ namespace Orarend
         {
             using (s)
             {
+                if (!!(Órarendek.Count > 0 || Osztályok?.Length > 0))
+                    return;
                 using (var ms = new MemoryStream())
                 {
                     s.CopyTo(ms);
