@@ -17,7 +17,7 @@ using Android.Preferences;
 
 namespace OrarendAndroidApp
 {
-    [Activity(Label = "Órarend", MainLauncher = true, Theme = "@android:style/Theme.Holo.Light")]
+    [Activity(Label = "Órarend", MainLauncher = true, Theme = "@android:style/Theme.DeviceDefault")]
     public class MainActivity : ActivityBase
     {
         private Handler handler;
@@ -42,7 +42,7 @@ namespace OrarendAndroidApp
             handler = new Handler();
             string[] list = FileList();
             if (list.Contains(DATA_FILENAME))
-                API.Betöltés(OpenFileInput(DATA_FILENAME), e => Hiba("Hiba az adatok betöltése során!\n" + e)); //TODO: Release módban előfordul <--
+                API.Betöltés(OpenFileInput(DATA_FILENAME), e => Hiba("Hiba az adatok betöltése során!\n" + e));
             timer = new Timer(CsengőTimer, null, new TimeSpan(0, 0, 0), new TimeSpan(0, 0, 5));
         }
 

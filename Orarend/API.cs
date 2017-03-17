@@ -67,7 +67,7 @@ namespace Orarend
             }
             Func<Órarend, Task> órarenda = async órarend =>
               {
-                  var doc = await load("http://deri.enaplo.net/ajax/orarend/orarendoszt.php?p=" + Uri.EscapeDataString(órarend.Osztály.Azonosító));
+                  var doc = await load("https://deri.enaplo.net/ajax/orarend/orarendoszt.php?p=" + órarend.Osztály.Azonosító);
                   await Task.Run(() =>
                       {
                           lock (Órarendek)
