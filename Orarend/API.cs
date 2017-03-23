@@ -90,7 +90,7 @@ namespace Orarend
                                               órarend.Órakezdetek[x] = TimeSpan.Parse(node.FirstChild.Attributes["title"].Value.Split('-')[0].Trim());
                                               var órák = (ahét ? órarend.ÓrákAHét : órarend.ÓrákBHét);
                                               for (int i = 0; i < 5; i++) //Napok
-                                                  {
+                                              {
                                                   var óranode = node.ChildNodes[i + 1].FirstChild;
                                                   var óra = órák[i][x];
                                                   if (óranode.ChildNodes.Count == 0)
@@ -109,7 +109,7 @@ namespace Orarend
                                                       if (óra == null)
                                                           órák[i][x] = óra = new Óra();
                                                       óra.Csoportok = new string[] { csoport }; //Az állandó órarendben osztályonként csak egy csoport van egy órán
-                                                          óra.Azonosító = óranode.ChildNodes[j + 2].InnerText;
+                                                      óra.Azonosító = óranode.ChildNodes[j + 2].InnerText;
                                                       óra.TeljesNév = óranode.ChildNodes[j + 2].Attributes["title"].Value;
                                                       óra.Terem = óranode.ChildNodes[j + 3].InnerText.Trim(' ', '(', ')');
                                                       óra.Tanár = new Tanár
@@ -124,9 +124,9 @@ namespace Orarend
                                           }
                                   }
                               }
-                              Java.Lang.Thread.Sleep(10);
                           }
                       });
+                  await Task.Delay(10);
               };
             if (ór == null)
                 foreach (var órarend in Órarendek)
