@@ -1,4 +1,5 @@
 ﻿using HtmlAgilityPack;
+using Orarend.Events;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -172,7 +173,7 @@ namespace Orarend
                             string csoport = osztályok.Length == 1 ? csoportok : csoportok.Substring(névindex + osztálynév.Length + 1, végeindex - névindex - osztálynév.Length - 1);
                             string óraaz = node.ChildNodes[4].InnerText;
                             string terem = node.ChildNodes[5].InnerText.Split(new string[] { " -> " }, StringSplitOptions.None).Last(); //Mindig az új termet tárolja el, ha változott
-                                string tanár = node.ChildNodes[7].InnerText;
+                            string tanár = node.ChildNodes[7].InnerText;
                             string[] megj = node.ChildNodes[8].InnerText.Split(' ');
                             string óranév = node.ChildNodes[9].InnerText;
                             DayOfWeek újnap = dátum.DayOfWeek;
@@ -193,6 +194,7 @@ namespace Orarend
                     }
                 }
                 Mentés(stream());
+                utolsófrissítésplusz1óra = DateTime.Now + new TimeSpan(1, 0, 0); //Mindenképpen állítsa be, hogy ne írja folyamatosan a hibát
             });
             return true;
         }
@@ -224,17 +226,32 @@ namespace Orarend
                             ms.Seek(0, SeekOrigin.Begin);
                             var serializer = new DataContractJsonSerializer(typeof(API));
                             serializer.ReadObject(ms); //A példányt beállítja, mikor elkezdi, nem várja meg, hogy végezzen (betöltés())
-                            return;
+                            betöltés();
                         }
                         catch (Exception e)
                         {
                             hibánál(e);
-                            példány = new API();
+                            Betöltés();
                         }
                     }
                 }
             }
         } //TODO: Tényleges órarendből állapítsa meg azt is, hogyha egyáltalán nincs ott egy óra, és máshol sincs, és ezt írja ki
+
+        /// <summary>
+        /// Betölti az alapértelemzett értékeket
+        /// </summary>
+        public static void Betöltés()
+        {
+            példány = new API();
+            betöltés();
+        }
+
+        private static Timer timer;
+        private static void betöltés()
+        {
+            timer = new Timer(CsengőTimer, null, new TimeSpan(0, 0, 0), new TimeSpan(0, 0, 5));
+        }
 
         public static void Mentés(Stream s)
         {
@@ -267,6 +284,106 @@ namespace Orarend
             {
                 return Hét % 2 == 0;
             }
+        }
+
+        public static bool Fókusz
+        {
+            set
+            {
+                if (value)
+                {
+                    timer.Change(new TimeSpan(0, 0, 0), new TimeSpan(0, 0, 5));
+                    frissítésHa1ÓraEltelt();
+                }
+                else
+                    timer.Change(Timeout.Infinite, Timeout.Infinite);
+            }
+        }
+
+        private static DateTime utolsófrissítésplusz1óra = DateTime.MinValue;
+        public event EventHandler Frissítéskor;
+        private static void frissítésHa1ÓraEltelt()
+        {
+            if (utolsófrissítésplusz1óra > DateTime.Now)
+                return;
+            Frissítéskor?.Invoke(példány, null);
+            //HelyettesítésFrissítés(false);
+        }
+
+        public DayOfWeek MaiNap
+        {
+            get
+            {
+                var x = DateTime.Today.DayOfWeek;
+                if (nincstöbbóra) x++;
+                return x > DayOfWeek.Saturday || x == DayOfWeek.Sunday ? DayOfWeek.Monday : x;
+            }
+        }
+
+        private static Helyettesítés[] helyettesítésInnenIde(int i, int j)
+        { //TODO: API-ba
+            return new Helyettesítés[]
+                {
+            órarend.Helyettesítések.FirstOrDefault(h => (int)h.EredetiNap == i + 1 && h.EredetiSorszám == j + 1),
+            órarend.Helyettesítések.FirstOrDefault(h => (int)h.ÚjNap == i + 1 && h.ÚjSorszám == j + 1 && h.ÚjÓra != null) //Ha az eredeti óra elmarad, és ide lesz helyezve egy másik, az áthelyezést mutassa
+                };
+        }
+
+        private static bool nincstöbbóra = false;
+        private static Órarend órarend; //TODO
+        public static event EventHandler<TimerEventArgs> CsengőTimerEvent;
+        private static void CsengőTimer(object state)
+        {
+            CsengőTimerEvent?.Invoke(példány, CsengőTimer());
+        }
+        private static TimerEventArgs CsengőTimer()
+        {
+            if (órarend == null)
+                return new TimerEventArgs(null, "Nincs órarend kiválasztva");
+            var most = DateTime.Now - DateTime.Today;
+            //var most = new TimeSpan(9, 46, 0);
+            bool talált = false;
+            nincstöbbóra = false;
+            if (órarend.Órakezdetek[0] == TimeSpan.Zero) //Még nincsenek beállítva a kezdetek
+                return new TimerEventArgs(null, "Betöltés"); //TODO
+            string kezdveg = null, kovora = null;
+            for (int i = 0; i < órarend.Órakezdetek.Length - 1; i++)
+            {
+                var vége = órarend.Órakezdetek[i].Add(new TimeSpan(0, 45, 0));
+                bool becsengetés;
+                int x = (int)DateTime.Today.DayOfWeek - 1;
+                Óra óra;
+                var innenide = helyettesítésInnenIde(x, i);
+                Func<TimeSpan, string> óraperc = ts => ts.Hours > 0 ? ts.ToString("h\\ómm\\p") : ts.ToString("mm") + " perc";
+                if (x != -1 && x < 6 && (óra = innenide[1] != null ? innenide[1].ÚjÓra : innenide[0] != null ? innenide[0].EredetiNap != innenide[0].ÚjNap || innenide[0].EredetiSorszám != innenide[0].ÚjSorszám ? null : innenide[0].ÚjÓra : órarend.Órák[x][i]) != null)
+                { //-1: Vasárnap
+                    if (most > órarend.Órakezdetek[i])
+                    {
+                        if (most < vége)
+                        {
+                            kezdveg = "Kicsengetés: " + óraperc(vége - most);
+                            talált = true;
+                            becsengetés = false;
+                        }
+                        else
+                            continue;
+                    }
+                    else
+                    {
+                        kezdveg = "Becsengetés: " + óraperc(órarend.Órakezdetek[i] - most);
+                        talált = true;
+                        becsengetés = true;
+                    }
+                    kovora = (becsengetés ? "Következő" : "Jelenlegi") + " óra: " + óra.EgyediNév + "\n" + óra.Terem + "\n" + óra.Tanár.Név + "\n" + óra.Csoportok.Aggregate((a, b) => a + ", " + b);
+                    nincstöbbóra = false;
+                    break;
+                }
+            }
+            if (!talált)
+            {
+                nincstöbbóra = true;
+            }
+            return new TimerEventArgs(kovora, kezdveg);
         }
     }
 }

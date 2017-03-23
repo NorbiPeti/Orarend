@@ -22,7 +22,6 @@ namespace OrarendAndroidApp
     {
         private Handler handler;
         private Órarend órarend;
-        private Timer timer;
 
         private const int EDIT_ADD_ACT_REQUEST = 1;
         private const int SETTINGS_ACT_REQUEST = 2;
@@ -43,7 +42,10 @@ namespace OrarendAndroidApp
             string[] list = FileList();
             if (list.Contains(DATA_FILENAME))
                 API.Betöltés(OpenFileInput(DATA_FILENAME), e => Hiba("Hiba az adatok betöltése során!\n" + e));
-            timer = new Timer(CsengőTimer, null, new TimeSpan(0, 0, 0), new TimeSpan(0, 0, 5));
+            else
+                API.Betöltés();
+            if (API.CsengőTimerEvent == null)
+                API.CsengőTimerEvent += CsengőTimer;
         }
 
         private void AndroidEnvironment_UnhandledExceptionRaiser(object sender, RaiseThrowableEventArgs e)
@@ -122,7 +124,6 @@ namespace OrarendAndroidApp
                         if (t.Result)
                             Toast.MakeText(this, "Helyettesítések frissítve", ToastLength.Short).Show();
                     }
-                    utolsófrissítésplusz1óra = DateTime.Now + new TimeSpan(1, 0, 0); //Mindenképpen állítsa be, hogy ne írja folyamatosan a hibát
                 });
             });
         }
@@ -206,15 +207,6 @@ namespace OrarendAndroidApp
             FindViewById<TextView>(Resource.Id.kivoraTV).Visibility = ViewStates.Gone;
             FindViewById<TextView>(Resource.Id.helyTV).Visibility = ViewStates.Gone;
             selected = null;
-        }
-
-        private Helyettesítés[] helyettesítésInnenIde(int i, int j)
-        { //TODO: API-ba
-            return new Helyettesítés[]
-                {
-            órarend.Helyettesítések.FirstOrDefault(h => (int)h.EredetiNap == i + 1 && h.EredetiSorszám == j + 1),
-            órarend.Helyettesítések.FirstOrDefault(h => (int)h.ÚjNap == i + 1 && h.ÚjSorszám == j + 1 && h.ÚjÓra != null) //Ha az eredeti óra elmarad, és ide lesz helyezve egy másik, az áthelyezést mutassa
-                };
         }
 
         private TextView selected;
@@ -375,69 +367,20 @@ namespace OrarendAndroidApp
             return ret;
         }
 
-        private bool nincstöbbóra = false;
-        private void CsengőTimer(object state)
+        private void CsengőTimer(object sender, TimerEventArgs e)
         {
             handler.Post(() =>
             {
                 var kezdveg = FindViewById<TextView>(Resource.Id.kezdvegTV);
-                if (órarend == null)
-                {
-                    kezdveg.Text = "Nincs órarend kiválasztva";
-                    return;
-                }
-                var most = DateTime.Now - DateTime.Today;
-                //var most = new TimeSpan(9, 46, 0);
-                bool talált = false;
                 var kovora = FindViewById<TextView>(Resource.Id.kovoraTV);
-                nincstöbbóra = false;
-                if (órarend.Órakezdetek[0] == TimeSpan.Zero)
-                { //Még nincsenek beállítva a kezdetek
-                    kezdveg.Text = "Betöltés";
+                if (e.KövetkezőÓra == null)
                     kovora.Visibility = ViewStates.Invisible;
-                    return;
-                }
-                for (int i = 0; i < órarend.Órakezdetek.Length - 1; i++)
-                {
-                    var vége = órarend.Órakezdetek[i].Add(new TimeSpan(0, 45, 0));
-                    bool becsengetés;
-                    int x = (int)DateTime.Today.DayOfWeek - 1; //TODO: A mai nap és ez az egész az API-ba
-                    //x = 2; //TODO: TMP
-                    Óra óra;
-                    var innenide = helyettesítésInnenIde(x, i);
-                    Func<TimeSpan, string> óraperc = ts => ts.Hours > 0 ? ts.ToString("h\\ómm\\p") : ts.ToString("mm") + " perc";
-                    if (x != -1 && x < 6 && (óra = innenide[1] != null ? innenide[1].ÚjÓra : innenide[0] != null ? innenide[0].EredetiNap != innenide[0].ÚjNap || innenide[0].EredetiSorszám != innenide[0].ÚjSorszám ? null : innenide[0].ÚjÓra : órarend.Órák[x][i]) != null)
-                    { //-1: Vasárnap
-                        if (most > órarend.Órakezdetek[i])
-                        {
-                            if (most < vége)
-                            {
-                                kezdveg.Text = "Kicsengetés: " + óraperc(vége - most);
-                                talált = true;
-                                becsengetés = false;
-                            }
-                            else
-                                continue;
-                        }
-                        else
-                        {
-                            kezdveg.Text = "Becsengetés: " + óraperc(órarend.Órakezdetek[i] - most);
-                            talált = true;
-                            becsengetés = true;
-                        }
-                        kovora.Text = (becsengetés ? "Következő" : "Jelenlegi") + " óra: " + óra.EgyediNév + "\n" + óra.Terem + "\n" + óra.Tanár.Név + "\n" + óra.Csoportok.Aggregate((a, b) => a + ", " + b);
-                        kovora.Visibility = ViewStates.Visible;
-                        kezdveg.Visibility = ViewStates.Visible;
-                        nincstöbbóra = false;
-                        break;
-                    }
-                }
-                if (!talált)
-                {
+                else
+                    kovora.Text = e.KövetkezőÓra;
+                if (e.HátralévőIdő == null)
                     kezdveg.Visibility = ViewStates.Invisible;
-                    kovora.Visibility = ViewStates.Invisible;
-                    nincstöbbóra = true;
-                }
+                else
+                    kezdveg.Text = e.HátralévőIdő;
             });
         }
 
@@ -469,32 +412,20 @@ namespace OrarendAndroidApp
             base.OnWindowFocusChanged(hasFocus);
             if (!hasFocus)
             {
-                timer.Change(Timeout.Infinite, Timeout.Infinite);
+                API.Fókusz = false;
                 return;
             }
-            timer.Change(new TimeSpan(0, 0, 0), new TimeSpan(0, 0, 5));
-            frissítésHa1ÓraEltelt();
             MaiNaphozGörgetés();
         }
 
         private void MaiNaphozGörgetés()
         {
-            var x = DateTime.Today.DayOfWeek;
-            if (nincstöbbóra) x++;
-            x = x > DayOfWeek.Saturday || x == DayOfWeek.Sunday ? DayOfWeek.Monday : x;
+            var x = API.MaiNap;
             var table = FindViewById<TableLayout>(Resource.Id.tableLayout1);
             if (table.ChildCount == 0)
                 return;
             var cell = (table.GetChildAt(0) as ViewGroup).GetChildAt((int)x);
             FindViewById<HorizontalScrollView>(Resource.Id.horizontalView).SmoothScrollTo(Math.Max(cell.Left - (FindViewById(Resource.Id.container).Width - cell.Width) / 2, 0), 0);
-        }
-
-        private DateTime utolsófrissítésplusz1óra = DateTime.MinValue;
-        private void frissítésHa1ÓraEltelt()
-        {
-            if (utolsófrissítésplusz1óra > DateTime.Now)
-                return;
-            HelyettesítésFrissítés(false);
         }
     }
 }
