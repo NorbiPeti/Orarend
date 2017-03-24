@@ -1,5 +1,6 @@
 ﻿using HtmlAgilityPack;
 using Orarend.Events;
+using SimpleTimerPortable;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -210,12 +211,13 @@ namespace Orarend
         /// </summary>
         /// <param name="s">A stream, ahonnan betöltse az adatokat</param>
         /// <param name="hibánál">Megadja, mi történjen egy hiba esetén</param>
-        public static void Betöltés(Stream s, Action<Exception> hibánál)
+        /// <returns>Elvégezte-e a betöltést</returns>
+        public static bool Betöltés(Stream s, Action<Exception> hibánál)
         {
             using (s)
             {
-                if (!!(Órarendek.Count > 0 || Osztályok?.Length > 0))
-                    return;
+                if (!!!betöltés())
+                    return false;
                 using (var ms = new MemoryStream())
                 {
                     s.CopyTo(ms);
@@ -226,31 +228,38 @@ namespace Orarend
                             ms.Seek(0, SeekOrigin.Begin);
                             var serializer = new DataContractJsonSerializer(typeof(API));
                             serializer.ReadObject(ms); //A példányt beállítja, mikor elkezdi, nem várja meg, hogy végezzen (betöltés())
-                            betöltés();
+                            return true;
                         }
                         catch (Exception e)
                         {
                             hibánál(e);
-                            Betöltés();
+                            return Betöltés();
                         }
                     }
+                    else return false;
                 }
             }
         } //TODO: Tényleges órarendből állapítsa meg azt is, hogyha egyáltalán nincs ott egy óra, és máshol sincs, és ezt írja ki
 
         /// <summary>
         /// Betölti az alapértelemzett értékeket
+        /// <returns>Elvégezte-e a betöltést</returns>
         /// </summary>
-        public static void Betöltés()
+        public static bool Betöltés()
         {
+            if (!betöltés())
+                return false;
             példány = new API();
-            betöltés();
+            return true;
         }
 
         private static Timer timer;
-        private static void betöltés()
+        private static bool betöltés()
         {
-            timer = new Timer(CsengőTimer, null, new TimeSpan(0, 0, 0), new TimeSpan(0, 0, 5));
+            if (!!(Órarendek.Count > 0 || Osztályok?.Length > 0 || timer != null))
+                return false;
+            timer = new Timer(CsengőTimer, null, new TimeSpan(0, 0, 0, 0, 100), new TimeSpan(0, 0, 5));
+            return true;
         }
 
         public static void Mentés(Stream s)
@@ -296,12 +305,12 @@ namespace Orarend
                     frissítésHa1ÓraEltelt();
                 }
                 else
-                    timer.Change(Timeout.Infinite, Timeout.Infinite);
+                    timer.Cancel();
             }
         }
 
         private static DateTime utolsófrissítésplusz1óra = DateTime.MinValue;
-        public event EventHandler Frissítéskor;
+        public static event EventHandler Frissítéskor;
         private static void frissítésHa1ÓraEltelt()
         {
             if (utolsófrissítésplusz1óra > DateTime.Now)
@@ -310,7 +319,7 @@ namespace Orarend
             //HelyettesítésFrissítés(false);
         }
 
-        public DayOfWeek MaiNap
+        public static DayOfWeek MaiNap
         {
             get
             {
@@ -320,8 +329,8 @@ namespace Orarend
             }
         }
 
-        private static Helyettesítés[] helyettesítésInnenIde(int i, int j)
-        { //TODO: API-ba
+        public static Helyettesítés[] HelyettesítésInnenIde(Órarend órarend, int i, int j)
+        {
             return new Helyettesítés[]
                 {
             órarend.Helyettesítések.FirstOrDefault(h => (int)h.EredetiNap == i + 1 && h.EredetiSorszám == j + 1),
@@ -353,7 +362,7 @@ namespace Orarend
                 bool becsengetés;
                 int x = (int)DateTime.Today.DayOfWeek - 1;
                 Óra óra;
-                var innenide = helyettesítésInnenIde(x, i);
+                var innenide = API.HelyettesítésInnenIde(órarend, x, i);
                 Func<TimeSpan, string> óraperc = ts => ts.Hours > 0 ? ts.ToString("h\\ómm\\p") : ts.ToString("mm") + " perc";
                 if (x != -1 && x < 6 && (óra = innenide[1] != null ? innenide[1].ÚjÓra : innenide[0] != null ? innenide[0].EredetiNap != innenide[0].ÚjNap || innenide[0].EredetiSorszám != innenide[0].ÚjSorszám ? null : innenide[0].ÚjÓra : órarend.Órák[x][i]) != null)
                 { //-1: Vasárnap

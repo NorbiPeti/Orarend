@@ -41,6 +41,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Settings.cs" />
     <Compile Include="Tanár.cs" />
+    <Compile Include="Timer.cs" />
     <Compile Include="Óra.cs" />
     <Compile Include="Órarend.cs" />
     <Compile Include="ÓraTípus.cs" />

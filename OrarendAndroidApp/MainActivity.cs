@@ -14,6 +14,7 @@ using System.Threading;
 using System.IO;
 using System.Net;
 using Android.Preferences;
+using Orarend.Events;
 
 namespace OrarendAndroidApp
 {
@@ -40,11 +41,12 @@ namespace OrarendAndroidApp
             //ActionBar.SetCustomView(FindViewById<Spinner>(Resource.Id.spinner), new ActionBar.LayoutParams(GravityFlags.Left));
             handler = new Handler();
             string[] list = FileList();
+            bool betöltötte;
             if (list.Contains(DATA_FILENAME))
-                API.Betöltés(OpenFileInput(DATA_FILENAME), e => Hiba("Hiba az adatok betöltése során!\n" + e));
+                betöltötte = API.Betöltés(OpenFileInput(DATA_FILENAME), e => Hiba("Hiba az adatok betöltése során!\n" + e));
             else
-                API.Betöltés();
-            if (API.CsengőTimerEvent == null)
+                betöltötte = API.Betöltés();
+            if (betöltötte)
                 API.CsengőTimerEvent += CsengőTimer;
         }
 
@@ -188,7 +190,7 @@ namespace OrarendAndroidApp
                     addCell((j + 1).ToString(), DarkTheme ? Color.White : Color.Black, tr);
                     for (int i = 0; i < 6; i++)
                     {
-                        var innenide = helyettesítésInnenIde(i, j);
+                        var innenide = API.HelyettesítésInnenIde(órarend, i, j);
                         var helyettesítés = innenide[0];
                         var helyettesítésIde = innenide[1];
                         addCell(helyettesítésIde != null ? helyettesítésIde.ÚjÓra.EgyediNév : helyettesítés != null ? helyettesítés.EredetiNap != helyettesítés.ÚjNap || helyettesítés.EredetiSorszám != helyettesítés.ÚjSorszám ? "Áthelyezve" : helyettesítés.ÚjÓra?.EgyediNév ?? "elmarad" : órarend.Órák[i][j]?.EgyediNév ?? "", helyettesítés == null ? (DarkTheme ? Color.WhiteSmoke : Color.Black) : Color.Red, tr, new int[2] { i, j });
@@ -224,7 +226,7 @@ namespace OrarendAndroidApp
             Helyettesítés helyettesítésIde = null;
             if (ij != null)
             {
-                var innenide = helyettesítésInnenIde(ij[0], ij[1]);
+                var innenide = API.HelyettesítésInnenIde(órarend, ij[0], ij[1]);
                 helyettesítésInnen = innenide[0];
                 helyettesítésIde = innenide[1];
             }
