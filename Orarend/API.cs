@@ -37,9 +37,9 @@ namespace Orarend
         /// <para>Lehet null, ha még nem volt sikeres <see cref="Frissítés"/>.</para>
         /// </summary>
         /// <returns></returns>
-        public static Osztály[] Osztályok { get { return példány.osztályok; } private set { példány.osztályok = value; } }
+        public static Osztály[] Osztályok { get => példány.osztályok; private set => példány.osztályok = value; }
         public static List<Órarend> Órarendek { get { return példány.órarendek; } }
-        public static Settings Beállítások { get { return példány.beállítások; } private set { példány.beállítások = value; } }
+        public static Settings Beállítások { get => példány.beállítások; private set => példány.beállítások = value; }
         /// <summary>
         /// Frissíti az osztálylistát és az eredeti órarendet, első megnyitásnál, és egy órarend hozzáadásánál/szerkesztésénél, majd hetente elegendő meghívni
         /// <param name="stream">A file stream, ahova mentse az adatokat, hogy ne kelljen külön meghívni - Azért funkció, hogy elkerüljök az adatvesztést, mivel így csak a mentéskor nyitja meg</param>
@@ -201,10 +201,7 @@ namespace Orarend
         }
 
         [OnDeserializing]
-        private void betöltés(StreamingContext context)
-        { //Az órák azonosítójának beállításakor szükséges már
-            példány = this;
-        }
+        private void betöltés(StreamingContext context) => példány = this; //Az órák azonosítójának beállításakor szükséges már
 
         /// <summary>
         /// Betölti az adatokat, ha még nincsenek betöltve
@@ -265,13 +262,8 @@ namespace Orarend
         public static void Mentés(Stream s)
         {
             using (s)
-            {
                 if (példány != null)
-                {
-                    var serializer = new DataContractJsonSerializer(példány.GetType());
-                    serializer.WriteObject(s, példány);
-                }
-            }
+                    new DataContractJsonSerializer(példány.GetType()).WriteObject(s, példány);
         }
         /// <summary>
         /// Visszatér a megjelenítendő héttel. Ez megegyezik a tényleges héttel, kivéve hétvégén, amikor a következő
@@ -287,13 +279,7 @@ namespace Orarend
             }
         }
 
-        public static bool AHét
-        {
-            get
-            {
-                return Hét % 2 == 0;
-            }
-        }
+        public static bool AHét { get => Hét % 2 == 0; }
 
         public static bool Fókusz
         {
@@ -329,14 +315,10 @@ namespace Orarend
             }
         }
 
-        public static Helyettesítés[] HelyettesítésInnenIde(Órarend órarend, int i, int j)
-        {
-            return new Helyettesítés[]
-                {
-            órarend.Helyettesítések.FirstOrDefault(h => (int)h.EredetiNap == i + 1 && h.EredetiSorszám == j + 1),
-            órarend.Helyettesítések.FirstOrDefault(h => (int)h.ÚjNap == i + 1 && h.ÚjSorszám == j + 1 && h.ÚjÓra != null) //Ha az eredeti óra elmarad, és ide lesz helyezve egy másik, az áthelyezést mutassa
-                };
-        }
+        public static (Helyettesítés innen, Helyettesítés ide) HelyettesítésInnenIde(Órarend órarend, int i, int j) =>
+            (órarend.Helyettesítések.FirstOrDefault(h => (int)h.EredetiNap == i + 1 && h.EredetiSorszám == j + 1),
+            órarend.Helyettesítések.FirstOrDefault(h => (int)h.ÚjNap == i + 1 && h.ÚjSorszám == j + 1 && h.ÚjÓra != null));
+        //Ha az eredeti óra elmarad, és ide lesz helyezve egy másik, az áthelyezést mutassa
 
         private static bool nincstöbbóra = false;
         private static Órarend órarend; //TODO
@@ -354,7 +336,7 @@ namespace Orarend
             bool talált = false;
             nincstöbbóra = false;
             if (órarend.Órakezdetek[0] == TimeSpan.Zero) //Még nincsenek beállítva a kezdetek
-                return new TimerEventArgs(null, "Betöltés"); //TODO
+                return new TimerEventArgs(null, "Betöltés");
             string kezdveg = null, kovora = null;
             for (int i = 0; i < órarend.Órakezdetek.Length - 1; i++)
             {
@@ -362,9 +344,9 @@ namespace Orarend
                 bool becsengetés;
                 int x = (int)DateTime.Today.DayOfWeek - 1;
                 Óra óra;
-                var innenide = API.HelyettesítésInnenIde(órarend, x, i);
+                var (innen, ide) = HelyettesítésInnenIde(órarend, x, i);
                 Func<TimeSpan, string> óraperc = ts => ts.Hours > 0 ? ts.ToString("h\\ómm\\p") : ts.ToString("mm") + " perc";
-                if (x != -1 && x < 6 && (óra = innenide[1] != null ? innenide[1].ÚjÓra : innenide[0] != null ? innenide[0].EredetiNap != innenide[0].ÚjNap || innenide[0].EredetiSorszám != innenide[0].ÚjSorszám ? null : innenide[0].ÚjÓra : órarend.Órák[x][i]) != null)
+                if (x != -1 && x < 6 && (óra = ide != null ? ide.ÚjÓra : innen != null ? innen.EredetiNap != innen.ÚjNap || innen.EredetiSorszám != innen.ÚjSorszám ? null : innen.ÚjÓra : órarend.Órák[x][i]) != null)
                 { //-1: Vasárnap
                     if (most > órarend.Órakezdetek[i])
                     {

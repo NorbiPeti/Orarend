@@ -17,8 +17,8 @@ namespace OrarendAndroidApp
         {
             var settings = PreferenceManager.GetDefaultSharedPreferences(activity);
             bool darktheme = settings.GetBoolean("pref_theme", false);
-            if (activity is ActivityBase)
-                (activity as ActivityBase).DarkTheme = darktheme;
+            if (activity is ActivityBase ab)
+                ab.DarkTheme = darktheme;
             activity.SetTheme(darktheme ? Android.Resource.Style.ThemeDeviceDefault : Android.Resource.Style.ThemeDeviceDefaultLight);
         }
 

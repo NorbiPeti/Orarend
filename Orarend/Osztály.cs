@@ -18,34 +18,12 @@ namespace Orarend
         {
         }
 
-        public override string ToString()
-        {
-            return Név;
-        }
+        public override string ToString() => Név;
 
-        public bool Equals(Osztály other)
-        {
-            return Azonosító == other?.Azonosító;
-        }
-
-        public static bool operator==(Osztály a, Osztály b)
-        {
-            return a?.Equals(b) ?? (object)b == null;
-        }
-
-        public static bool operator!=(Osztály a, Osztály b)
-        {
-            return !(a == b);
-        }
-
-        public override bool Equals(object obj)
-        {
-            return obj is Osztály ? Equals(obj as Osztály) : base.Equals(obj);
-        }
-
-        public override int GetHashCode()
-        {
-            return Azonosító.GetHashCode();
-        }
+        public bool Equals(Osztály other) => Azonosító == other?.Azonosító;
+        public static bool operator==(Osztály a, Osztály b) => a?.Equals(b) ?? (object)b == null;
+        public static bool operator!=(Osztály a, Osztály b) => !(a == b);
+        public override bool Equals(object obj) => obj is Osztály ? Equals(obj as Osztály) : base.Equals(obj);
+        public override int GetHashCode() => Azonosító.GetHashCode();
     }
 }

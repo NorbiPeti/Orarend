@@ -32,13 +32,8 @@ namespace OrarendAndroidApp
         {
             AndroidEnvironment.UnhandledExceptionRaiser += AndroidEnvironment_UnhandledExceptionRaiser;
             base.OnCreate(bundle);
-            //RequestWindowFeature(WindowFeatures.ActionBar);
             SetContentView(Resource.Layout.MainLayout);
-            //SetActionBar(new Toolbar(this));
             ActionBar.SetDisplayShowTitleEnabled(false);
-            //ActionBar.CustomView = new Spinner(this);
-            //ActionBar.CustomView = FindViewById<Spinner>(Resource.Id.spinner);
-            //ActionBar.SetCustomView(FindViewById<Spinner>(Resource.Id.spinner), new ActionBar.LayoutParams(GravityFlags.Left));
             handler = new Handler();
             string[] list = FileList();
             bool betöltötte;
@@ -190,10 +185,8 @@ namespace OrarendAndroidApp
                     addCell((j + 1).ToString(), DarkTheme ? Color.White : Color.Black, tr);
                     for (int i = 0; i < 6; i++)
                     {
-                        var innenide = API.HelyettesítésInnenIde(órarend, i, j);
-                        var helyettesítés = innenide[0];
-                        var helyettesítésIde = innenide[1];
-                        addCell(helyettesítésIde != null ? helyettesítésIde.ÚjÓra.EgyediNév : helyettesítés != null ? helyettesítés.EredetiNap != helyettesítés.ÚjNap || helyettesítés.EredetiSorszám != helyettesítés.ÚjSorszám ? "Áthelyezve" : helyettesítés.ÚjÓra?.EgyediNév ?? "elmarad" : órarend.Órák[i][j]?.EgyediNév ?? "", helyettesítés == null ? (DarkTheme ? Color.WhiteSmoke : Color.Black) : Color.Red, tr, new int[2] { i, j });
+                        var (innen, ide) = API.HelyettesítésInnenIde(órarend, i, j);
+                        addCell(ide != null ? ide.ÚjÓra.EgyediNév : innen != null ? innen.EredetiNap != innen.ÚjNap || innen.EredetiSorszám != innen.ÚjSorszám ? "Áthelyezve" : innen.ÚjÓra?.EgyediNév ?? "elmarad" : órarend.Órák[i][j]?.EgyediNév ?? "", innen == null ? (DarkTheme ? Color.WhiteSmoke : Color.Black) : Color.Red, tr, new int[2] { i, j });
                     }
                     table.AddView(tr, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WrapContent, ViewGroup.LayoutParams.WrapContent));
                 }
@@ -225,11 +218,7 @@ namespace OrarendAndroidApp
             Helyettesítés helyettesítésInnen = null;
             Helyettesítés helyettesítésIde = null;
             if (ij != null)
-            {
-                var innenide = API.HelyettesítésInnenIde(órarend, ij[0], ij[1]);
-                helyettesítésInnen = innenide[0];
-                helyettesítésIde = innenide[1];
-            }
+                (helyettesítésInnen, helyettesítésIde) = API.HelyettesítésInnenIde(órarend, ij[0], ij[1]);
             if (ij == null || (óra = órarend.Órák[ij[0]][ij[1]]) == null && helyettesítésIde?.ÚjÓra == null)
             {
                 deselect();
@@ -336,15 +325,10 @@ namespace OrarendAndroidApp
             return base.OnOptionsItemSelected(item);
         }
 
-        private void Hiba(string msg)
-        {
-            Hiba(this, msg);
-        }
+        private void Hiba(string msg) => Hiba(this, msg);
 
-        public static void Hiba(Context c, string msg)
-        {
+        public static void Hiba(Context c, string msg) =>
             new AlertDialog.Builder(c).SetMessage(msg).SetNeutralButton("OK", (s, e) => { ((AlertDialog)s).Dismiss(); ((AlertDialog)s).Dispose(); }).SetTitle("Hiba").Show();
-        }
 
         /// <summary>
         /// Az összes hibát kiírja, ami a <see cref="Task"/> futása közben keletkezett
@@ -357,10 +341,12 @@ namespace OrarendAndroidApp
             bool ret = true;
             foreach (var ex in (IEnumerable<Exception>)t.Exception?.InnerExceptions ?? new Exception[0])
             {
-                if (ex is WebException)
+                if (ex is WebException wex)
                 {
-                    if (internethiba)
-                        Hiba("Nem sikerült csatlakozni az E-naplóhoz.\n" + ex.Message);
+                    if (internethiba || wex.Status != WebExceptionStatus.NameResolutionFailure)
+                        Hiba("Nem sikerült csatlakozni az E-naplóhoz.\n" + wex.Message);
+                    else if (wex.Status == WebExceptionStatus.ConnectFailure)
+                        Hiba("Nem sikerült csatlakozni az E-naplóhoz.\nHa van internet, próbáld újraindítani az alkalmazást.");
                 }
                 else
                     Hiba(ex.ToString());
@@ -404,9 +390,7 @@ namespace OrarendAndroidApp
                 órarendlistafrissítés();
             }
             else if (requestCode == SETTINGS_ACT_REQUEST)
-            {
                 Recreate();
-            }
         }
         
         public override void OnWindowFocusChanged(bool hasFocus)
