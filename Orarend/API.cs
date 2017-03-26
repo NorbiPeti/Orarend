@@ -302,7 +302,6 @@ namespace Orarend
             if (utolsófrissítésplusz1óra > DateTime.Now)
                 return;
             Frissítéskor?.Invoke(példány, null);
-            //HelyettesítésFrissítés(false);
         }
 
         public static DayOfWeek MaiNap
@@ -323,10 +322,7 @@ namespace Orarend
         private static bool nincstöbbóra = false;
         private static Órarend órarend; //TODO
         public static event EventHandler<TimerEventArgs> CsengőTimerEvent;
-        private static void CsengőTimer(object state)
-        {
-            CsengőTimerEvent?.Invoke(példány, CsengőTimer());
-        }
+        private static void CsengőTimer(object state) => CsengőTimerEvent?.Invoke(példány, CsengőTimer());
         private static TimerEventArgs CsengőTimer()
         {
             if (órarend == null)
@@ -371,9 +367,7 @@ namespace Orarend
                 }
             }
             if (!talált)
-            {
                 nincstöbbóra = true;
-            }
             return new TimerEventArgs(kovora, kezdveg);
         }
     }

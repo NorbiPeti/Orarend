@@ -36,19 +36,17 @@ namespace OrarendAndroidApp
             ActionBar.SetDisplayShowTitleEnabled(false);
             handler = new Handler();
             string[] list = FileList();
-            bool betöltötte;
-            if (list.Contains(DATA_FILENAME))
-                betöltötte = API.Betöltés(OpenFileInput(DATA_FILENAME), e => Hiba("Hiba az adatok betöltése során!\n" + e));
-            else
-                betöltötte = API.Betöltés();
-            if (betöltötte)
+            if (list.Contains(DATA_FILENAME)
+                ? API.Betöltés(OpenFileInput(DATA_FILENAME), e => Hiba("Hiba az adatok betöltése során!\n" + e)) : API.Betöltés())
+            {
                 API.CsengőTimerEvent += CsengőTimer;
+                API.Frissítéskor += (_, __) => HelyettesítésFrissítés(false);
+            }
         }
 
         private void AndroidEnvironment_UnhandledExceptionRaiser(object sender, RaiseThrowableEventArgs e)
         {
-            if (!e.Handled)
-                Hiba("Kezeletlen hiba!\n" + e.Exception);
+            if (!e.Handled) Hiba("Kezeletlen hiba!\n" + e.Exception);
             e.Handled = true;
         }
 
@@ -85,28 +83,31 @@ namespace OrarendAndroidApp
             órarendfrissítés();
         }
 
-        private void addCell(string text, Color color, TableRow tr1, int[] tag = null)
+        private void addCell(string text, Color color, TableRow tr1, (int, int)? tag = null)
         {
             TextView textview = new TextView(this);
             textview.SetText(text, TextView.BufferType.Normal);
             textview.SetTextColor(color);
             textview.SetPadding(10, 10, 10, 10);
             textview.SetBackgroundResource(DarkTheme ? Resource.Drawable.cell_shape_dark : Resource.Drawable.cell_shape_light);
-            textview.Tag = tag;
+            textview.Tag = tag.HasValue ? new JavaTuple<int, int>(tag.Value) : null;
             textview.Clickable = true;
             textview.Click += ÓraClick;
             tr1.AddView(textview);
+        }
+
+        private class JavaTuple<T1, T2> : Java.Lang.Object
+        {
+            public (T1, T2) obj;
+            public JavaTuple((T1, T2) obj) => this.obj = obj;
+            public void Deconstruct(out T1 first, out T2 second) => (first, second) = obj;
         }
 
         private void HelyettesítésFrissítés(bool internethiba = true)
         {
             var bar = FindViewById<ProgressBar>(Resource.Id.progressBar1);
             //var menu = FindViewById<ActionMenuView>(Resource.Id.actionMenuView1);
-            Action loadstart = () =>
-             {
-                 bar.Visibility = ViewStates.Visible;
-                 //menu.Enabled = false;
-             };
+            Action loadstart = () => bar.Visibility = ViewStates.Visible;
             handler.Post(loadstart);
             API.HelyettesítésFrissítés(() => OpenFileOutput(DATA_FILENAME, FileCreationMode.Private)).ContinueWith(t =>
             {
@@ -114,7 +115,6 @@ namespace OrarendAndroidApp
                 handler.Post(() =>
                 {
                     bar.Visibility = ViewStates.Gone;
-                    //menu.Enabled = true;
                     if (TaskHiba(t, internethiba))
                     {
                         órarendfrissítés();
@@ -129,11 +129,7 @@ namespace OrarendAndroidApp
         {
             var bar = FindViewById<ProgressBar>(Resource.Id.progressBar1);
             //var menu = FindViewById<ActionMenuView>(Resource.Id.actionMenuView1);
-            Action loadstart = () =>
-            {
-                bar.Visibility = ViewStates.Visible;
-                //menu.Enabled = false;
-            };
+            Action loadstart = () => bar.Visibility = ViewStates.Visible;
             handler.Post(loadstart);
             API.Frissítés(() => OpenFileOutput(DATA_FILENAME, FileCreationMode.Private), ór).ContinueWith(t =>
               {
@@ -168,13 +164,14 @@ namespace OrarendAndroidApp
             for (int i = 0; i < Napok.Length; i++)
                 addCell(Napok[i], DarkTheme ? Color.White : Color.Black, tr);
             table.AddView(tr, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WrapContent, ViewGroup.LayoutParams.WrapContent));
+            int rowadds = 0;
             for (int j = 0; j < 16; j++)
             {
                 tr = new TableRow(this);
                 bool notnull = false;
                 for (int i = 0; i < 6; i++)
                 { //Kihagyja az üres sorokat
-                    if (órarend.Órák[i][j] != null)
+                    if (órarend.Órák[i][j] != null) //TODO: Helyettesítéseket is figyelje
                     {
                         notnull = true;
                         break;
@@ -182,14 +179,23 @@ namespace OrarendAndroidApp
                 }
                 if (notnull)
                 {
+                    for (int x = 0; x < rowadds; x++)
+                    {
+                        var tr1 = new TableRow(this);
+                        for (int i = 0; i < 6; i++)
+                            addCell("", Color.Black, tr1);
+                        table.AddView(tr, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WrapContent, ViewGroup.LayoutParams.WrapContent));
+                    }
+                    rowadds = 0;
                     addCell((j + 1).ToString(), DarkTheme ? Color.White : Color.Black, tr);
                     for (int i = 0; i < 6; i++)
                     {
                         var (innen, ide) = API.HelyettesítésInnenIde(órarend, i, j);
-                        addCell(ide != null ? ide.ÚjÓra.EgyediNév : innen != null ? innen.EredetiNap != innen.ÚjNap || innen.EredetiSorszám != innen.ÚjSorszám ? "Áthelyezve" : innen.ÚjÓra?.EgyediNév ?? "elmarad" : órarend.Órák[i][j]?.EgyediNév ?? "", innen == null ? (DarkTheme ? Color.WhiteSmoke : Color.Black) : Color.Red, tr, new int[2] { i, j });
+                        addCell(ide != null ? ide.ÚjÓra.EgyediNév : innen != null ? innen.EredetiNap != innen.ÚjNap || innen.EredetiSorszám != innen.ÚjSorszám ? "Áthelyezve" : innen.ÚjÓra?.EgyediNév ?? "elmarad" : órarend.Órák[i][j]?.EgyediNév ?? "", innen == null ? (DarkTheme ? Color.WhiteSmoke : Color.Black) : Color.Red, tr, (i, j));
                     }
                     table.AddView(tr, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WrapContent, ViewGroup.LayoutParams.WrapContent));
                 }
+                else rowadds++;
             }
             handler.Post(() => MaiNaphozGörgetés());
         }
@@ -211,15 +217,24 @@ namespace OrarendAndroidApp
         private void ÓraClick(object sender, EventArgs e)
         {
             var tv = (TextView)sender;
-            var ij = (int[])tv.Tag;
             if (selected != null && selected != sender)
                 selected.SetBackgroundResource(DarkTheme ? Resource.Drawable.cell_shape_dark : Resource.Drawable.cell_shape_light);
             Óra óra;
             Helyettesítés helyettesítésInnen = null;
             Helyettesítés helyettesítésIde = null;
+            var ij = (JavaTuple<int, int>)tv.Tag;
+            int i, j;
             if (ij != null)
-                (helyettesítésInnen, helyettesítésIde) = API.HelyettesítésInnenIde(órarend, ij[0], ij[1]);
-            if (ij == null || (óra = órarend.Órák[ij[0]][ij[1]]) == null && helyettesítésIde?.ÚjÓra == null)
+            {
+                (i, j) = ij;
+                (helyettesítésInnen, helyettesítésIde) = API.HelyettesítésInnenIde(órarend, i, j);
+                if ((óra = órarend.Órák[i][j]) == null && helyettesítésIde?.ÚjÓra == null)
+                {
+                    deselect();
+                    return;
+                }
+            }
+            else
             {
                 deselect();
                 return;
@@ -231,11 +246,11 @@ namespace OrarendAndroidApp
                 kivora.Visibility = ViewStates.Gone;
             else
             {
-                kivora.Text = Napok[ij[0]] + " " + (ij[1] + 1) + ". óra"
+                kivora.Text = Napok[i] + " " + (j + 1) + ". óra"
                 + "\nNév: " + óra.TeljesNév
                 + "\nTerem: " + óra.Terem
                 + "\nTanár: " + óra.Tanár.Név
-                + "\nIdőtartam: " + órarend.Órakezdetek[ij[1]].ToString("hh\\:mm") + "-" + órarend.Órakezdetek[ij[1]].Add(new TimeSpan(0, 45, 0)).ToString("hh\\:mm")
+                + "\nIdőtartam: " + órarend.Órakezdetek[j].ToString("hh\\:mm") + "-" + órarend.Órakezdetek[j].Add(new TimeSpan(0, 45, 0)).ToString("hh\\:mm")
                 + "\nCsoport: " + óra.Csoportok.Aggregate((a, b) => a + ", " + b);
                 kivora.Visibility = ViewStates.Visible;
             }
@@ -396,21 +411,18 @@ namespace OrarendAndroidApp
         public override void OnWindowFocusChanged(bool hasFocus)
         {
             base.OnWindowFocusChanged(hasFocus);
+            API.Fókusz = hasFocus;
             if (!hasFocus)
-            {
-                API.Fókusz = false;
                 return;
-            }
             MaiNaphozGörgetés();
         }
 
         private void MaiNaphozGörgetés()
         {
-            var x = API.MaiNap;
             var table = FindViewById<TableLayout>(Resource.Id.tableLayout1);
             if (table.ChildCount == 0)
                 return;
-            var cell = (table.GetChildAt(0) as ViewGroup).GetChildAt((int)x);
+            var cell = (table.GetChildAt(0) as ViewGroup).GetChildAt((int)API.MaiNap);
             FindViewById<HorizontalScrollView>(Resource.Id.horizontalView).SmoothScrollTo(Math.Max(cell.Left - (FindViewById(Resource.Id.container).Width - cell.Width) / 2, 0), 0);
         }
     }
