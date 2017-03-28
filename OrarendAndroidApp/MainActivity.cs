@@ -22,7 +22,6 @@ namespace OrarendAndroidApp
     public class MainActivity : ActivityBase
     {
         private Handler handler;
-        private Órarend órarend;
 
         private const int EDIT_ADD_ACT_REQUEST = 1;
         private const int SETTINGS_ACT_REQUEST = 2;
@@ -79,7 +78,7 @@ namespace OrarendAndroidApp
 
         private void ÓrarendClick(object sender, AdapterView.ItemSelectedEventArgs e)
         {
-            órarend = API.Órarendek[e.Position];
+            API.ÓrarendKiválasztás(e.Position);
             órarendfrissítés();
         }
 
@@ -128,7 +127,6 @@ namespace OrarendAndroidApp
         private void ÓrarendFrissítés(Órarend ór = null)
         {
             var bar = FindViewById<ProgressBar>(Resource.Id.progressBar1);
-            //var menu = FindViewById<ActionMenuView>(Resource.Id.actionMenuView1);
             Action loadstart = () => bar.Visibility = ViewStates.Visible;
             handler.Post(loadstart);
             API.Frissítés(() => OpenFileOutput(DATA_FILENAME, FileCreationMode.Private), ór).ContinueWith(t =>
@@ -141,7 +139,7 @@ namespace OrarendAndroidApp
                       HelyettesítésFrissítés();
                       if (TaskHiba(t))
                       {
-                          if (ór == null || ór == órarend)
+                          if (ór == null || ór == API.Órarend)
                               órarendfrissítés();
                           Toast.MakeText(this, (API.Órarendek.Count > 0 ? "Órarend" + (ór == null ? "ek" : "") + " és o" : "O") + "sztálylista frissítve", ToastLength.Short).Show();
                       }
@@ -157,21 +155,21 @@ namespace OrarendAndroidApp
             deselect();
             if (table.ChildCount > 0)
                 table.RemoveViews(0, table.ChildCount);
-            if (órarend == null)
+            if (API.Órarend == null)
                 return;
             TableRow tr = new TableRow(this);
             addCell(API.AHét ? "A" : "B", DarkTheme ? Color.White : Color.Black, tr);
             for (int i = 0; i < Napok.Length; i++)
                 addCell(Napok[i], DarkTheme ? Color.White : Color.Black, tr);
             table.AddView(tr, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WrapContent, ViewGroup.LayoutParams.WrapContent));
-            int rowadds = 0;
+            byte rowadds = 0;
             for (int j = 0; j < 16; j++)
             {
                 tr = new TableRow(this);
                 bool notnull = false;
                 for (int i = 0; i < 6; i++)
                 { //Kihagyja az üres sorokat
-                    if (órarend.Órák[i][j] != null) //TODO: Helyettesítéseket is figyelje
+                    if (API.Órarend.Órák[i][j] != null) //TODO: Helyettesítéseket is figyelje
                     {
                         notnull = true;
                         break;
@@ -182,16 +180,17 @@ namespace OrarendAndroidApp
                     for (int x = 0; x < rowadds; x++)
                     {
                         var tr1 = new TableRow(this);
+                        addCell((j + x).ToString(), DarkTheme ? Color.White : Color.Black, tr1);
                         for (int i = 0; i < 6; i++)
                             addCell("", Color.Black, tr1);
-                        table.AddView(tr, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WrapContent, ViewGroup.LayoutParams.WrapContent));
+                        table.AddView(tr1, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WrapContent, ViewGroup.LayoutParams.WrapContent));
                     }
                     rowadds = 0;
                     addCell((j + 1).ToString(), DarkTheme ? Color.White : Color.Black, tr);
                     for (int i = 0; i < 6; i++)
                     {
-                        var (innen, ide) = API.HelyettesítésInnenIde(órarend, i, j);
-                        addCell(ide != null ? ide.ÚjÓra.EgyediNév : innen != null ? innen.EredetiNap != innen.ÚjNap || innen.EredetiSorszám != innen.ÚjSorszám ? "Áthelyezve" : innen.ÚjÓra?.EgyediNév ?? "elmarad" : órarend.Órák[i][j]?.EgyediNév ?? "", innen == null ? (DarkTheme ? Color.WhiteSmoke : Color.Black) : Color.Red, tr, (i, j));
+                        var (innen, ide) = API.HelyettesítésInnenIde(API.Órarend, i, j);
+                        addCell(ide != null ? ide.ÚjÓra.EgyediNév : innen != null ? innen.EredetiNap != innen.ÚjNap || innen.EredetiSorszám != innen.ÚjSorszám ? "Áthelyezve" : innen.ÚjÓra?.EgyediNév ?? "elmarad" : API.Órarend.Órák[i][j]?.EgyediNév ?? "", innen == null ? (DarkTheme ? Color.WhiteSmoke : Color.Black) : Color.Red, tr, (i, j));
                     }
                     table.AddView(tr, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WrapContent, ViewGroup.LayoutParams.WrapContent));
                 }
@@ -227,8 +226,8 @@ namespace OrarendAndroidApp
             if (ij != null)
             {
                 (i, j) = ij;
-                (helyettesítésInnen, helyettesítésIde) = API.HelyettesítésInnenIde(órarend, i, j);
-                if ((óra = órarend.Órák[i][j]) == null && helyettesítésIde?.ÚjÓra == null)
+                (helyettesítésInnen, helyettesítésIde) = API.HelyettesítésInnenIde(API.Órarend, i, j);
+                if ((óra = API.Órarend.Órák[i][j]) == null && helyettesítésIde?.ÚjÓra == null)
                 {
                     deselect();
                     return;
@@ -250,7 +249,7 @@ namespace OrarendAndroidApp
                 + "\nNév: " + óra.TeljesNév
                 + "\nTerem: " + óra.Terem
                 + "\nTanár: " + óra.Tanár.Név
-                + "\nIdőtartam: " + órarend.Órakezdetek[j].ToString("hh\\:mm") + "-" + órarend.Órakezdetek[j].Add(new TimeSpan(0, 45, 0)).ToString("hh\\:mm")
+                + "\nIdőtartam: " + API.Órarend.Órakezdetek[j].ToString("hh\\:mm") + "-" + API.Órarend.Órakezdetek[j].Add(new TimeSpan(0, 45, 0)).ToString("hh\\:mm")
                 + "\nCsoport: " + óra.Csoportok.Aggregate((a, b) => a + ", " + b);
                 kivora.Visibility = ViewStates.Visible;
             }
@@ -270,7 +269,7 @@ namespace OrarendAndroidApp
                 ? "Áthelyezve: " + Napok[(int)helyettesítésIde.EredetiNap - 1] + " " + helyettesítésIde.EredetiSorszám + ". óra --> ide"
                     + (helyettesítésIde.ÚjÓra.EgyediNév != óra?.EgyediNév ? "\nÓra: " + helyettesítésIde.ÚjÓra.EgyediNév : "")
                     + (helyettesítésIde.ÚjÓra.Terem != óra?.Terem ? "\nTerem: " + helyettesítésIde.ÚjÓra.Terem : "")
-                    + ((óra?.Tanár.Név != (helyettesítésIde.ÚjÓra.Tanár.Név == "" ? órarend.Órák[(int)helyettesítésIde.EredetiNap - 1][helyettesítésIde.EredetiSorszám - 1].Tanár.Név : helyettesítésIde.ÚjÓra.Tanár.Név)) ? "\nTanár: " + (óra?.Tanár.Név == "" ? órarend.Órák[(int)helyettesítésIde.EredetiNap - 1][helyettesítésIde.EredetiSorszám - 1].Tanár.Név : helyettesítésIde.ÚjÓra.Tanár.Név) : "")
+                    + ((óra?.Tanár.Név != (helyettesítésIde.ÚjÓra.Tanár.Név == "" ? API.Órarend.Órák[(int)helyettesítésIde.EredetiNap - 1][helyettesítésIde.EredetiSorszám - 1].Tanár.Név : helyettesítésIde.ÚjÓra.Tanár.Név)) ? "\nTanár: " + (óra?.Tanár.Név == "" ? API.Órarend.Órák[(int)helyettesítésIde.EredetiNap - 1][helyettesítésIde.EredetiSorszám - 1].Tanár.Név : helyettesítésIde.ÚjÓra.Tanár.Név) : "")
                     + (helyettesítésIde.ÚjÓra.Csoportok[0] != óra?.Csoportok[0] ? "\nCsoport: " + helyettesítésIde.ÚjÓra.Csoportok.Aggregate((a, b) => a + ", " + b) : "") //ˇˇ De ha változott, akkor nem
                     : "") //Ha a pozicíó nem változott, a fentebbi rész már kiírta az adatait
             ;
@@ -314,14 +313,14 @@ namespace OrarendAndroidApp
                     }
                 case Resource.Id.menu_edit:
                     {
-                        if (órarend == null)
+                        if (API.Órarend == null)
                         {
                             Toast.MakeText(this, "Nincs órarend kiválasztva", ToastLength.Short).Show();
                             break;
                         }
                         var intent = new Intent(this, typeof(EditActivity));
                         intent.PutExtra("add", false);
-                        intent.PutExtra("index", API.Órarendek.IndexOf(órarend));
+                        intent.PutExtra("index", API.Órarendek.IndexOf(API.Órarend));
                         StartActivityForResult(intent, EDIT_ADD_ACT_REQUEST);
                         break;
                     }
@@ -399,7 +398,7 @@ namespace OrarendAndroidApp
                     ÓrarendFrissítés(API.Órarendek[index]);
                 else
                 {
-                    órarend = null;
+                    API.ÓrarendKiválasztásTörlése();
                     órarendfrissítés();
                 }
                 órarendlistafrissítés();

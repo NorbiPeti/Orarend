@@ -38,10 +38,11 @@ namespace SimpleTimerPortable
 
         public new void Dispose() { base.Cancel(); }
 
-        public void Change(TimeSpan dueTime, TimeSpan period)
+        public Timer Change(TimeSpan dueTime, TimeSpan period)
         {
-            Cancel();
-            start(dueTime, period);
+            var timer = new Timer(callback, state, dueTime, period);
+            this.Dispose();
+            return timer;
         }
     }
 }
