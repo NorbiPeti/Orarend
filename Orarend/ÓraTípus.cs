@@ -7,7 +7,21 @@ namespace Orarend
     public class ÓraTípus
     {
         [DataMember]
-        public string TeljesNév { get; set; }
+        private string teljesnév;
+        public string TeljesNév
+        {
+            get
+            {
+                return teljesnév;
+            }
+            set
+            {
+                if ((value?.Trim()?.Length ?? 0) == 0)
+                    teljesnév = "(" + Azonosító + ")";
+                else
+                    teljesnév = value;
+            }
+        }
         [DataMember]
         public string Azonosító { get; set; }
         [DataMember]

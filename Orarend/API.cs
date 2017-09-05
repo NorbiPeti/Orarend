@@ -56,7 +56,7 @@ namespace Orarend
                     using (var sr = new StreamReader(resp.GetResponseStream()))
                     {
                         const string trtd = @"(?:\s\w+=(?:\""|\')?(?:\w|[áéóüöőúű.:;])+(?:\""|\')?)*>(?!.+?\<table(?:\s\w+?=\""?\w+\""?)*\>.+?)(.+?)(?=<\1(?:\s\w+=(?:\""|\')?(?:\w|[áéóüöőúű.:;])+(?:\""|\')?)*>)";
-                        string html = Regex.Replace(Regex.Replace(Regex.Replace(sr.ReadToEnd(), "<th([^>]*)>((?:\\w|[áéóüöőúű.])+)(?=<)(?!\\/)", "<th$1>$2</th>"), "<(tr)" + trtd, "<$1>$2</$1>"), "<(td)" + trtd, "<$1>$2</$1>");
+                        string html = Regex.Replace(Regex.Replace(Regex.Replace(sr.ReadToEnd(), "<th([^>]*)>((?:\\w|[áéóüöőúű./])+)(?=<)(?!\\/)", "<th$1>$2</th>"), "<(tr)" + trtd, "<$1>$2</$1>"), "<(td)" + trtd, "<$1>$2</$1>");
                         doc.LoadHtml(html);
                     }
                 });
@@ -76,6 +76,7 @@ namespace Orarend
                           {
                               Osztályok = doc.GetElementbyId("uok").ChildNodes.Where(node => node.HasAttributes).Select(node => new Osztály { Azonosító = node.GetAttributeValue("value", ""), Név = node.NextSibling.InnerText }).ToArray();
                               bool ahét = true;
+                              int maxx = 0;
                               foreach (var node in doc.GetElementbyId("oda").FirstChild.FirstChild.ChildNodes[1].ChildNodes)
                               {
                                   switch (node.FirstChild.InnerText)
@@ -89,6 +90,7 @@ namespace Orarend
                                       default:
                                           {
                                               int x = int.Parse(node.FirstChild.InnerText) - 1;
+                                              maxx = x > maxx ? x : maxx;
                                               órarend.Órakezdetek[x] = TimeSpan.Parse(node.FirstChild.Attributes["title"].Value.Split('-')[0].Trim());
                                               var órák = (ahét ? órarend.ÓrákAHét : órarend.ÓrákBHét);
                                               for (int i = 0; i < 5; i++) //Napok
@@ -126,6 +128,9 @@ namespace Orarend
                                           }
                                   }
                               }
+                              for (int i = maxx + 1; i < 16; i++) //Órák
+                                  for (int j = 0; j < 5; j++) //Napok
+                                      órarend.Órák[j][i] = null; //Kitörli a küldött órarendben nem szereplő órákat
                           }
                       });
                   await Task.Delay(10);
@@ -140,8 +145,8 @@ namespace Orarend
 
         /// <summary>
         /// Frissíti a helyettesítéseket, naponta, indításkor vagy gombnyommásra frissítse (minden nap az első előtérbe kerüléskor)
-        /// <param name="stream">A file stream, ahova mentse az adatokat, hogy ne kelljen külön meghívni - Azért funkció, hogy elkerüljök az adatvesztést, mivel így csak a mentéskor nyitja meg</param>
         /// </summary>
+        /// <param name="stream">A file stream, ahova mentse az adatokat, hogy ne kelljen külön meghívni - Azért funkció, hogy elkerüljök az adatvesztést, mivel így csak a mentéskor nyitja meg</param>
         public static async Task<bool> HelyettesítésFrissítés(Func<Stream> stream)
         {
             if (Órarendek.Count == 0 || Osztályok.Length == 0)
@@ -167,7 +172,13 @@ namespace Orarend
                         var osztályok = node.ChildNodes[2].InnerText.Split(new string[] { ", " }, StringSplitOptions.None);
                         foreach (string osztálynév in osztályok)
                         {
-                            Osztály osztály = Osztályok.Single(o => o.Azonosító.Contains(osztálynév));
+                            Osztály osztály = Osztályok.SingleOrDefault(o => o.Azonosító.Contains(osztálynév));
+                            if (osztály == null)
+                            {
+                                var x = new InvalidOperationException($"A helyettesítésekben szereplő osztály \"{osztálynév}\" nem található.");
+                                x.Data.Add("OERROR", "CLS_NOT_FOUND");
+                                throw x;
+                            }
                             var csoportok = node.ChildNodes[3].InnerText;
                             int névindex = csoportok.IndexOf(osztálynév);
                             int végeindex = csoportok.IndexOf(")", névindex >= 0 ? névindex : 0);
@@ -296,12 +307,16 @@ namespace Orarend
         }
 
         private static DateTime utolsófrissítésplusz1óra = DateTime.MinValue;
-        public static event EventHandler Frissítéskor;
+        public static event EventHandler<FrissítésEventArgs> Frissítéskor;
+        public class FrissítésEventArgs { public bool Siker { get; set; } = false; }
         private static void frissítésHa1ÓraEltelt()
         {
             if (utolsófrissítésplusz1óra > DateTime.Now)
                 return;
-            Frissítéskor?.Invoke(példány, null);
+            var args = new FrissítésEventArgs();
+            Frissítéskor?.Invoke(példány, args);
+            if (args.Siker)
+                utolsófrissítésplusz1óra = DateTime.Now + new TimeSpan(1, 0, 0);
         }
 
         public static DayOfWeek MaiNap

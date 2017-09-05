@@ -39,7 +39,7 @@ namespace OrarendAndroidApp
                 ? API.Betöltés(OpenFileInput(DATA_FILENAME), e => Hiba("Hiba az adatok betöltése során!\n" + e)) : API.Betöltés())
             {
                 API.CsengőTimerEvent += CsengőTimer;
-                API.Frissítéskor += (_, __) => HelyettesítésFrissítés(false);
+                API.Frissítéskor += (_, args) => HelyettesítésFrissítés(false, args);
             }
         }
 
@@ -102,7 +102,7 @@ namespace OrarendAndroidApp
             public void Deconstruct(out T1 first, out T2 second) => (first, second) = obj;
         }
 
-        private void HelyettesítésFrissítés(bool internethiba = true)
+        private void HelyettesítésFrissítés(bool internethiba = true, API.FrissítésEventArgs args = null)
         {
             var bar = FindViewById<ProgressBar>(Resource.Id.progressBar1);
             //var menu = FindViewById<ActionMenuView>(Resource.Id.actionMenuView1);
@@ -114,12 +114,13 @@ namespace OrarendAndroidApp
                 handler.Post(() =>
                 {
                     bar.Visibility = ViewStates.Gone;
-                    if (TaskHiba(t, internethiba))
+                    if (TaskHibaNemVolt(t, internethiba) && t.Result)
                     {
                         órarendfrissítés();
-                        if (t.Result)
-                            Toast.MakeText(this, "Helyettesítések frissítve", ToastLength.Short).Show();
+                        Toast.MakeText(this, "Helyettesítések frissítve", ToastLength.Short).Show();
+                        if (args != null) args.Siker = true;
                     }
+                    else if (!internethiba && args != null) args.Siker = true;
                 });
             });
         }
@@ -137,7 +138,7 @@ namespace OrarendAndroidApp
                       bar.Visibility = ViewStates.Gone;
                       órarendlistafrissítés();
                       HelyettesítésFrissítés();
-                      if (TaskHiba(t))
+                      if (TaskHibaNemVolt(t))
                       {
                           if (ór == null || ór == API.Órarend)
                               órarendfrissítés();
@@ -350,7 +351,7 @@ namespace OrarendAndroidApp
         /// <param name="t"></param>
         /// <param name="internethiba">Ha igaz, kiírja a WebException-öket is</param>
         /// <returns>Igaz, ha nem volt hiba</returns>
-        private bool TaskHiba(Task t, bool internethiba = true)
+        private bool TaskHibaNemVolt(Task t, bool internethiba = true)
         {
             bool ret = true;
             foreach (var ex in (IEnumerable<Exception>)t.Exception?.InnerExceptions ?? new Exception[0])
@@ -362,6 +363,8 @@ namespace OrarendAndroidApp
                     else if (wex.Status == WebExceptionStatus.ConnectFailure)
                         Hiba("Nem sikerült csatlakozni az E-naplóhoz.\nHa van internet, próbáld újraindítani az alkalmazást.");
                 }
+                else if (ex is InvalidOperationException oex && oex.Data.Contains("OERROR") && (string)oex.Data["OERROR"] == "CLS_NOT_FOUND")
+                    ÓrarendFrissítés();
                 else
                     Hiba(ex.ToString());
                 ret = false;
