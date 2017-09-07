@@ -30,7 +30,7 @@ namespace Orarend
         public Osztály[] osztályok { get; private set; } = new Osztály[0]; //Ez az initializáció csak akkor fut le, ha nem tölti be fájlból
         [DataMember(Order = 2)]
         public List<Órarend> órarendek { get; private set; } = new List<Órarend>();
-        //[DataMember]
+        [DataMember]
         public Settings beállítások { get; private set; } = new Settings();
         /// <summary>
         /// <para>Visszatér az osztályok listájával.</para>
@@ -89,10 +89,11 @@ namespace Orarend
                                           break;
                                       default:
                                           {
-                                              int x = int.Parse(node.FirstChild.InnerText) - 1;
+                                              int x = int.Parse(node.FirstChild.InnerText) - 1, y = x - Beállítások.ÓraOffset;
                                               maxx = x > maxx ? x : maxx;
-                                              órarend.Órakezdetek[x] = TimeSpan.Parse(node.FirstChild.Attributes["title"].Value.Split('-')[0].Trim());
-                                              var órák = (ahét ? órarend.ÓrákAHét : órarend.ÓrákBHét);
+                                              if (y >= 0 && y < órarend.Órakezdetek.Length)
+                                                  órarend.Órakezdetek[y] = TimeSpan.Parse(node.FirstChild.Attributes["title"].Value.Split('-')[0].Trim());
+                                              var órák = ahét ? órarend.ÓrákAHét : órarend.ÓrákBHét;
                                               for (int i = 0; i < 5; i++) //Napok
                                               {
                                                   var óranode = node.ChildNodes[i + 1].FirstChild;

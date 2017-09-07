@@ -1,8 +1,18 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
-    <CheckBoxPreference
-        android:key="pref_theme"
-        android:title="Sötét téma"
-        android:summary="Sötét téma"
-        android:defaultValue="false" />
+  <CheckBoxPreference
+      android:key="pref_theme"
+      android:title="Sötét téma"
+      android:summary="Sötét téma"
+      android:defaultValue="false" />
+  <Preference
+      android:key="pref_commonnames"
+      android:title="Gyakori óranevek"
+      android:summary="Gyakori óranevek használata" />
+  <EditTextPreference
+      android:key="pref_offset"
+      android:title="Óra eltolás"
+      android:summary="Pl. ha 1, akkor az első óra 8:15-kor kezdődik."
+      android:defaultValue="0"
+      android:numeric="integer" />
 </PreferenceScreen>

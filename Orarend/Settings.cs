@@ -18,6 +18,7 @@ namespace Orarend
             set(";prggy", "Programozás gyakorlat");
             set("testns", "Tesi");
             set("tapism", "Töri");
+            set("torten", "Töri");
             set("matema", "Matek");
             set("bioege", "Biosz");
             set("foldra", "Föci");
@@ -29,5 +30,8 @@ namespace Orarend
             if (ÓraTípus.Típusok.ContainsKey(id))
                 ÓraTípus.Típusok[id].EgyediNév = name;
         }
+
+        [DataMember]
+        public sbyte ÓraOffset { get; set; } = 0;
     }
 }

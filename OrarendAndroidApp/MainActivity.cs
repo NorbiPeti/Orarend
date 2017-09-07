@@ -107,7 +107,10 @@ namespace OrarendAndroidApp
             var bar = FindViewById<ProgressBar>(Resource.Id.progressBar1);
             //var menu = FindViewById<ActionMenuView>(Resource.Id.actionMenuView1);
             Action loadstart = () => bar.Visibility = ViewStates.Visible;
-            handler.Post(loadstart);
+            if (internethiba)
+                handler.Post(loadstart);
+            else
+                handler.PostDelayed(loadstart, 500);
             API.HelyettesítésFrissítés(() => OpenFileOutput(DATA_FILENAME, FileCreationMode.Private)).ContinueWith(t =>
             {
                 handler.RemoveCallbacks(loadstart);
@@ -125,11 +128,14 @@ namespace OrarendAndroidApp
             });
         }
 
-        private void ÓrarendFrissítés(Órarend ór = null)
+        private void ÓrarendFrissítés(bool auto, Órarend ór = null)
         {
             var bar = FindViewById<ProgressBar>(Resource.Id.progressBar1);
             Action loadstart = () => bar.Visibility = ViewStates.Visible;
-            handler.Post(loadstart);
+            if (auto)
+                handler.PostDelayed(loadstart, 500);
+            else
+                handler.Post(loadstart);
             API.Frissítés(() => OpenFileOutput(DATA_FILENAME, FileCreationMode.Private), ór).ContinueWith(t =>
               {
                   handler.RemoveCallbacks(loadstart);
@@ -290,7 +296,7 @@ namespace OrarendAndroidApp
                 menu.FindItem(Resource.Id.menu_preferences).SetIcon(Resource.Drawable.ic_settings_white_24dp);
             }
             if (API.Osztályok == null || API.Osztályok.Length == 0)
-                ÓrarendFrissítés();
+                ÓrarendFrissítés(true);
             else
                 órarendlistafrissítés();
             return base.OnCreateOptionsMenu(menu);
@@ -333,7 +339,7 @@ namespace OrarendAndroidApp
                     }
                 case Resource.Id.menu_fullrefresh:
                     {
-                        ÓrarendFrissítés();
+                        ÓrarendFrissítés(false);
                         break;
                     }
             }
@@ -364,7 +370,7 @@ namespace OrarendAndroidApp
                         Hiba("Nem sikerült csatlakozni az E-naplóhoz.\nHa van internet, próbáld újraindítani az alkalmazást.");
                 }
                 else if (ex is InvalidOperationException oex && oex.Data.Contains("OERROR") && (string)oex.Data["OERROR"] == "CLS_NOT_FOUND")
-                    ÓrarendFrissítés();
+                    ÓrarendFrissítés(true);
                 else
                     Hiba(ex.ToString());
                 ret = false;
@@ -398,7 +404,7 @@ namespace OrarendAndroidApp
                     return;
                 int index = data.Extras.GetBoolean("add") ? API.Órarendek.Count - 1 : data.Extras.GetInt("index");
                 if (!data.Extras.GetBoolean("deleted"))
-                    ÓrarendFrissítés(API.Órarendek[index]);
+                    ÓrarendFrissítés(false, API.Órarendek[index]);
                 else
                 {
                     API.ÓrarendKiválasztásTörlése();
@@ -407,7 +413,11 @@ namespace OrarendAndroidApp
                 órarendlistafrissítés();
             }
             else if (requestCode == SETTINGS_ACT_REQUEST)
+            {
+                if (data?.Extras?.GetBoolean("offsetchanged") ?? false)
+                    ÓrarendFrissítés(false);
                 Recreate();
+            }
         }
         
         public override void OnWindowFocusChanged(bool hasFocus)
