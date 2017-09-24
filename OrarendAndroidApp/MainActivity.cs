@@ -15,6 +15,7 @@ using System.IO;
 using System.Net;
 using Android.Preferences;
 using Orarend.Events;
+using System.Security;
 
 namespace OrarendAndroidApp
 {
@@ -26,7 +27,7 @@ namespace OrarendAndroidApp
         private const int EDIT_ADD_ACT_REQUEST = 1;
         private const int SETTINGS_ACT_REQUEST = 2;
         public const string DATA_FILENAME = "data.json";
-
+        
         protected override void OnCreate(Bundle bundle)
         {
             AndroidEnvironment.UnhandledExceptionRaiser += AndroidEnvironment_UnhandledExceptionRaiser;
@@ -82,6 +83,7 @@ namespace OrarendAndroidApp
             órarendfrissítés();
         }
 
+        [SecuritySafeCritical]
         private void addCell(string text, Color color, TableRow tr1, (int, int)? tag = null)
         {
             TextView textview = new TextView(this);
@@ -95,6 +97,7 @@ namespace OrarendAndroidApp
             tr1.AddView(textview);
         }
 
+        [SecuritySafeCritical]
         private class JavaTuple<T1, T2> : Java.Lang.Object
         {
             public (T1, T2) obj;
@@ -156,6 +159,7 @@ namespace OrarendAndroidApp
 
         private string[] Napok = new string[6] { "Hétfő", "Kedd", "Szerda", "Csütörtök", "Péntek", "Szombat" };
 
+        [SecuritySafeCritical]
         private void órarendfrissítés()
         {
             var table = FindViewById<TableLayout>(Resource.Id.tableLayout1);
@@ -220,6 +224,7 @@ namespace OrarendAndroidApp
         /// <summary>
         /// Kiválasztja az adott órát
         /// </summary>
+        [SecuritySafeCritical]
         private void ÓraClick(object sender, EventArgs e)
         {
             var tv = (TextView)sender;
@@ -364,13 +369,16 @@ namespace OrarendAndroidApp
             {
                 if (ex is WebException wex)
                 {
-                    if (internethiba || wex.Status != WebExceptionStatus.NameResolutionFailure)
-                        Hiba("Nem sikerült csatlakozni az E-naplóhoz.\n" + wex.Message);
-                    else if (wex.Status == WebExceptionStatus.ConnectFailure)
+                    if (internethiba && wex.Status == WebExceptionStatus.ConnectFailure)
                         Hiba("Nem sikerült csatlakozni az E-naplóhoz.\nHa van internet, próbáld újraindítani az alkalmazást.");
+                    else if (internethiba || wex.Status != WebExceptionStatus.NameResolutionFailure)
+                        Hiba("Nem sikerült csatlakozni az E-naplóhoz.\n" + wex.Message);
                 }
                 else if (ex is InvalidOperationException oex && oex.Data.Contains("OERROR") && (string)oex.Data["OERROR"] == "CLS_NOT_FOUND")
+                {
                     ÓrarendFrissítés(true);
+                    Toast.MakeText(this, oex.Message, ToastLength.Short).Show();
+                }
                 else
                     Hiba(ex.ToString());
                 ret = false;
@@ -384,14 +392,10 @@ namespace OrarendAndroidApp
             {
                 var kezdveg = FindViewById<TextView>(Resource.Id.kezdvegTV);
                 var kovora = FindViewById<TextView>(Resource.Id.kovoraTV);
-                if (e.KövetkezőÓra == null)
-                    kovora.Visibility = ViewStates.Invisible;
-                else
-                    kovora.Text = e.KövetkezőÓra;
-                if (e.HátralévőIdő == null)
-                    kezdveg.Visibility = ViewStates.Invisible;
-                else
-                    kezdveg.Text = e.HátralévőIdő;
+                kovora.Visibility = e.KövetkezőÓra == null ? ViewStates.Invisible : ViewStates.Visible;
+                kovora.Text = e.KövetkezőÓra ?? "";
+                kezdveg.Visibility = e.HátralévőIdő == null ? ViewStates.Invisible : ViewStates.Visible;
+                kezdveg.Text = e.HátralévőIdő ?? "";
             });
         }
 

@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
+using System.Security;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -30,7 +31,7 @@ namespace Orarend
         public Osztály[] osztályok { get; private set; } = new Osztály[0]; //Ez az initializáció csak akkor fut le, ha nem tölti be fájlból
         [DataMember(Order = 2)]
         public List<Órarend> órarendek { get; private set; } = new List<Órarend>();
-        [DataMember]
+        [DataMember(Order = 3)]
         public Settings beállítások { get; private set; } = new Settings();
         /// <summary>
         /// <para>Visszatér az osztályok listájával.</para>
@@ -284,14 +285,16 @@ namespace Orarend
         {
             get
             {
-                int jelenlegihét = CultureInfo.InvariantCulture.Calendar.GetWeekOfYear(DateTime.Today, CalendarWeekRule.FirstFullWeek, DayOfWeek.Monday);
+                int jelenlegihét = napbólhét(DateTime.Today);
                 if (DateTime.Today.DayOfWeek > DayOfWeek.Friday || DateTime.Today.DayOfWeek == DayOfWeek.Sunday)
                     jelenlegihét++;
                 return jelenlegihét;
             }
         }
 
-        public static bool AHét { get => Hét % 2 == 0; }
+        private static int napbólhét(DateTime nap) => CultureInfo.InvariantCulture.Calendar.GetWeekOfYear(nap, CalendarWeekRule.FirstFullWeek, DayOfWeek.Monday);
+
+        public static bool AHét { get => Hét % 2 == napbólhét(new DateTime(DateTime.Today.Year - (DateTime.Today.Month < 8 ? 1 : 0), 9, 1)) % 2; }
 
         public static bool Fókusz
         {
@@ -309,7 +312,7 @@ namespace Orarend
 
         private static DateTime utolsófrissítésplusz1óra = DateTime.MinValue;
         public static event EventHandler<FrissítésEventArgs> Frissítéskor;
-        public class FrissítésEventArgs { public bool Siker { get; set; } = false; }
+        public class FrissítésEventArgs : EventArgs { public bool Siker { get; set; } = false; }
         private static void frissítésHa1ÓraEltelt()
         {
             if (utolsófrissítésplusz1óra > DateTime.Now)
@@ -336,8 +339,8 @@ namespace Orarend
         //Ha az eredeti óra elmarad, és ide lesz helyezve egy másik, az áthelyezést mutassa
 
         public static Órarend Órarend { get; private set; }
-        public static void ÓrarendKiválasztás(int position) => Órarend = Órarendek[position];
-        public static void ÓrarendKiválasztásTörlése() => Órarend = null;
+        public static void ÓrarendKiválasztás(int position) { Órarend = Órarendek[position]; CsengőTimer(null); }
+        public static void ÓrarendKiválasztásTörlése() { Órarend = null; CsengőTimer(null); }
 
         private static bool nincstöbbóra = false;
         public static event EventHandler<TimerEventArgs> CsengőTimerEvent;
@@ -349,7 +352,7 @@ namespace Orarend
             var most = DateTime.Now - DateTime.Today;
             //var most = new TimeSpan(9, 46, 0);
             bool talált = false;
-            if (Órarend.Órakezdetek[0] == TimeSpan.Zero) //Még nincsenek beállítva a kezdetek
+            if (Órarend.Órakezdetek[Beállítások.ÓraOffset] == TimeSpan.Zero) //Még nincsenek beállítva a kezdetek
                 return new TimerEventArgs(null, "Betöltés");
             string kezdveg = null, kovora = null;
             for (int i = 0; i < Órarend.Órakezdetek.Length - 1; i++)
