@@ -362,7 +362,7 @@ namespace Orarend
                 int x = (int)DateTime.Today.DayOfWeek - 1;
                 Óra óra;
                 var (innen, ide) = HelyettesítésInnenIde(Órarend, x, i);
-                Func<TimeSpan, string> óraperc = ts => ts.Hours > 0 ? ts.ToString("h\\ómm\\p") : ts.ToString("mm") + " perc";
+                Func<TimeSpan, string> óraperc = ts => ts.Hours > 0 ? ts.ToString("h\\ómm\\p") : ts.ToString("m") + " perc";
                 if (x != -1 && x < 6 && (óra = ide != null ? ide.ÚjÓra : innen != null ? innen.EredetiNap != innen.ÚjNap || innen.EredetiSorszám != innen.ÚjSorszám ? null : innen.ÚjÓra : Órarend.Órák[x][i]) != null)
                 { //-1: Vasárnap
                     if (most > Órarend.Órakezdetek[i])

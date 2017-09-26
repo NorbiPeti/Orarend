@@ -23,7 +23,7 @@ namespace OrarendAndroidApp
     public class MainActivity : ActivityBase
     {
         private Handler handler;
-
+        
         private const int EDIT_ADD_ACT_REQUEST = 1;
         private const int SETTINGS_ACT_REQUEST = 2;
         public const string DATA_FILENAME = "data.json";
@@ -42,6 +42,11 @@ namespace OrarendAndroidApp
                 API.CsengőTimerEvent += CsengőTimer;
                 API.Frissítéskor += (_, args) => HelyettesítésFrissítés(false, args);
             }
+        }
+
+        protected override void OnDestroy()
+        {
+            base.OnDestroy();
         }
 
         private void AndroidEnvironment_UnhandledExceptionRaiser(object sender, RaiseThrowableEventArgs e)
@@ -371,7 +376,7 @@ namespace OrarendAndroidApp
                 {
                     if (internethiba && wex.Status == WebExceptionStatus.ConnectFailure)
                         Hiba("Nem sikerült csatlakozni az E-naplóhoz.\nHa van internet, próbáld újraindítani az alkalmazást.");
-                    else if (internethiba || wex.Status != WebExceptionStatus.NameResolutionFailure)
+                    else if (internethiba)
                         Hiba("Nem sikerült csatlakozni az E-naplóhoz.\n" + wex.Message);
                 }
                 else if (ex is InvalidOperationException oex && oex.Data.Contains("OERROR") && (string)oex.Data["OERROR"] == "CLS_NOT_FOUND")
