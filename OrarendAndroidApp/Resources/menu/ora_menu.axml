@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+  <item
+       android:id="@+id/menu_refresh"
+       android:title="Frissítés" />
+  <item
+       android:id="@+id/menu_add"
+       android:title="Hozzáadás" />
+  <item
+       android:id="@+id/menu_edit"
+       android:title="Szerkesztés" />
+  <item
+       android:id="@+id/menu_preferences"
+       android:title="Beállítások" />
+  <item
+       android:id="@+id/menu_fullrefresh"
+       android:title="Órarendfrissítés" />
+</menu>

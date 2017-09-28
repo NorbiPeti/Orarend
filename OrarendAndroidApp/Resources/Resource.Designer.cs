@@ -212,6 +212,9 @@ namespace OrarendAndroidApp
 			// aapt resource value: 0x7f060000
 			public const int main_menu_light = 2131099648;
 			
+			// aapt resource value: 0x7f060001
+			public const int ora_menu = 2131099649;
+			
 			static Menu()
 			{
 				global::Android.Runtime.ResourceIdManager.UpdateIdValues();

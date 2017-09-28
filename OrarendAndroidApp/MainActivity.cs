@@ -99,6 +99,9 @@ namespace OrarendAndroidApp
             textview.Tag = tag.HasValue ? new JavaTuple<int, int>(tag.Value) : null;
             textview.Clickable = true;
             textview.Click += ÓraClick;
+            //textview.LongClick += ÓraLongClick;
+            RegisterForContextMenu(textview);
+            textview.ContextMenuCreated += ÓraContextMenuCreated;
             tr1.AddView(textview);
         }
 
@@ -250,7 +253,7 @@ namespace OrarendAndroidApp
                     return;
                 }
             }
-            else
+            else //TODO: Metódus tv --> óra
             {
                 deselect();
                 return;
@@ -291,6 +294,21 @@ namespace OrarendAndroidApp
                     : "") //Ha a pozicíó nem változott, a fentebbi rész már kiírta az adatait
             ;
             hely.Visibility = ViewStates.Visible;
+        }
+
+        private void ÓraContextMenuCreated(object sender, View.CreateContextMenuEventArgs e)
+        {
+            //Toast.MakeText(this, "Ye! " + sender, ToastLength.Long).Show();
+            switch (sender)
+            {
+                case TextView tv:
+                    var ij = (JavaTuple<int, int>)tv.Tag;
+                    e.Menu.Add("")
+                    break;
+                default:
+                    Hiba("Ismeretlen küldő a menühöz!");
+                    break;
+            }
         }
 
         public override bool OnCreateOptionsMenu(IMenu menu)
