@@ -20,6 +20,9 @@ namespace Orarend
         /// </summary>
         [DataMember]
         public string[] Csoportok { get; set; }
+
+        [DataMember]
+        public bool ManuálisanHozzáadott { get; set; }
      
         [DataMember]
         public string Azonosító

@@ -218,6 +218,24 @@ namespace OrarendAndroidApp
             handler.Post(() => MaiNaphozGörgetés());
         }
 
+        private (int i, int j, Óra óra, Helyettesítés innen, Helyettesítés ide)? TV2Óra(TextView tv)
+        {
+            var ij = (JavaTuple<int, int>)tv.Tag;
+            int i, j;
+            Helyettesítés innen, ide;
+            Óra óra;
+            if (ij != null)
+            {
+                (i, j) = ij;
+                (innen, ide) = API.HelyettesítésInnenIde(API.Órarend, i, j);
+                if ((óra = API.Órarend.Órák[i][j]) == null && ide?.ÚjÓra == null)
+                    return null;
+            }
+            else
+                return null;
+            return (i, j, óra, innen, ide);
+        }
+
         /// <summary>
         /// A cellát nem frissíti, csak a szöveget tünteti el
         /// </summary>
@@ -238,26 +256,13 @@ namespace OrarendAndroidApp
             var tv = (TextView)sender;
             if (selected != null && selected != sender)
                 selected.SetBackgroundResource(DarkTheme ? Resource.Drawable.cell_shape_dark : Resource.Drawable.cell_shape_light);
-            Óra óra;
-            Helyettesítés helyettesítésInnen = null;
-            Helyettesítés helyettesítésIde = null;
-            var ij = (JavaTuple<int, int>)tv.Tag;
-            int i, j;
-            if (ij != null)
-            {
-                (i, j) = ij;
-                (helyettesítésInnen, helyettesítésIde) = API.HelyettesítésInnenIde(API.Órarend, i, j);
-                if ((óra = API.Órarend.Órák[i][j]) == null && helyettesítésIde?.ÚjÓra == null)
-                {
-                    deselect();
-                    return;
-                }
-            }
-            else //TODO: Metódus tv --> óra
+            var x = TV2Óra(tv);
+            if (x == null)
             {
                 deselect();
                 return;
             }
+            var (i, j, óra, helyettesítésInnen, helyettesítésIde) = x?.ToTuple();
             tv.SetBackgroundResource(DarkTheme ? Resource.Drawable.cell_shape_selected_dark : Resource.Drawable.cell_shape_selected_light);
             selected = tv;
             var kivora = FindViewById<TextView>(Resource.Id.kivoraTV);
@@ -298,17 +303,35 @@ namespace OrarendAndroidApp
 
         private void ÓraContextMenuCreated(object sender, View.CreateContextMenuEventArgs e)
         {
-            //Toast.MakeText(this, "Ye! " + sender, ToastLength.Long).Show();
             switch (sender)
             {
                 case TextView tv:
-                    var ij = (JavaTuple<int, int>)tv.Tag;
-                    e.Menu.Add("")
+                    var x = TV2Óra(tv);
+                    Óra óra;
+                    if (x != null)
+                        (_, _, óra, _, _) = x?.ToTuple();
+                    else
+                        óra = null;
+                    if (óra == null)
+                    { //TODO
+                        ÓraContextItemData.Add(e.Menu.Add("Hozzáadás"), () => StartActivity(new Intent(this, typeof(SettingsActivity))));
+                    }
                     break;
                 default:
                     Hiba("Ismeretlen küldő a menühöz!");
                     break;
             }
+        }
+
+        private Dictionary<IMenuItem, Action> ÓraContextItemData = new Dictionary<IMenuItem, Action>();
+        private T ctor<T>() where T : new() => new T();
+
+        public override bool OnContextItemSelected(IMenuItem item)
+        {
+            bool ret = ÓraContextItemData.ContainsKey(item);
+            if (ret)
+                ÓraContextItemData[item]();
+            return ret;
         }
 
         public override bool OnCreateOptionsMenu(IMenu menu)
