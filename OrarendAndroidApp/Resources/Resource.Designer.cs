@@ -111,8 +111,8 @@ namespace OrarendAndroidApp
 			// aapt resource value: 0x7f070008
 			public const int deleteButton = 2131165192;
 			
-			// aapt resource value: 0x7f070011
-			public const int helyTV = 2131165201;
+			// aapt resource value: 0x7f070010
+			public const int helyTV = 2131165200;
 			
 			// aapt resource value: 0x7f07000e
 			public const int horizontalView = 2131165198;
@@ -120,8 +120,8 @@ namespace OrarendAndroidApp
 			// aapt resource value: 0x7f070012
 			public const int kezdvegTV = 2131165202;
 			
-			// aapt resource value: 0x7f070010
-			public const int kivoraTV = 2131165200;
+			// aapt resource value: 0x7f070011
+			public const int kivoraTV = 2131165201;
 			
 			// aapt resource value: 0x7f070013
 			public const int kovoraTV = 2131165203;

@@ -350,7 +350,7 @@ namespace Orarend
             if (Órarend == null)
                 return new TimerEventArgs(null, "Nincs órarend kiválasztva");
             var most = DateTime.Now - DateTime.Today;
-            //var most = new TimeSpan(9, 46, 0);
+            //var most = new TimeSpan(12, 46, 0);
             bool talált = false;
             if (Órarend.Órakezdetek[Beállítások.ÓraOffset] == TimeSpan.Zero) //Még nincsenek beállítva a kezdetek
                 return new TimerEventArgs(null, "Betöltés");

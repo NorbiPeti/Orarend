@@ -56,14 +56,6 @@
                 </HorizontalScrollView>
             </ScrollView>
             <TextView
-                android:id="@+id/kivoraTV"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Kiválasztott óra"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:visibility="gone" />
-            <TextView
                 android:id="@+id/helyTV"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -72,6 +64,14 @@
                 android:textStyle="bold"
                 android:visibility="gone"
                 android:textColor="#FF0000" />
+            <TextView
+                android:id="@+id/kivoraTV"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Kiválasztott óra"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
             <TextView
                 android:id="@+id/kezdvegTV"
                 android:text="Betöltés"

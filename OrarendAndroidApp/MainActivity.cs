@@ -23,11 +23,11 @@ namespace OrarendAndroidApp
     public class MainActivity : ActivityBase
     {
         private Handler handler;
-        
+
         private const int EDIT_ADD_ACT_REQUEST = 1;
         private const int SETTINGS_ACT_REQUEST = 2;
         public const string DATA_FILENAME = "data.json";
-        
+
         protected override void OnCreate(Bundle bundle)
         {
             AndroidEnvironment.UnhandledExceptionRaiser += AndroidEnvironment_UnhandledExceptionRaiser;
@@ -209,7 +209,7 @@ namespace OrarendAndroidApp
                     for (int i = 0; i < 6; i++)
                     {
                         var (innen, ide) = API.HelyettesítésInnenIde(API.Órarend, i, j);
-                        addCell(ide != null ? ide.ÚjÓra.EgyediNév : innen != null ? innen.EredetiNap != innen.ÚjNap || innen.EredetiSorszám != innen.ÚjSorszám ? "Áthelyezve" : innen.ÚjÓra?.EgyediNév ?? "elmarad" : API.Órarend.Órák[i][j]?.EgyediNév ?? "", innen == null ? (DarkTheme ? Color.WhiteSmoke : Color.Black) : Color.Red, tr, (i, j));
+                        addCell(ide != null ? ide.ÚjÓra.EgyediNév : innen != null ? innen.EredetiNap != innen.ÚjNap || innen.EredetiSorszám != innen.ÚjSorszám ? "áthelyezve" : innen.ÚjÓra?.EgyediNév ?? "elmarad" : API.Órarend.Órák[i][j]?.EgyediNév ?? "", innen == null ? (DarkTheme ? Color.WhiteSmoke : Color.Black) : Color.Red, tr, (i, j));
                     }
                     table.AddView(tr, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WrapContent, ViewGroup.LayoutParams.WrapContent));
                 }
@@ -288,7 +288,8 @@ namespace OrarendAndroidApp
                         + (helyettesítésInnen.ÚjÓra.Terem != óra.Terem ? "\nTerem: " + helyettesítésInnen.ÚjÓra.Terem : "")
                         + (helyettesítésInnen.ÚjÓra.Tanár.Név != óra.Tanár.Név ? "\nTanár: " + helyettesítésInnen.ÚjÓra.Tanár.Név : "")
                         + (helyettesítésInnen.ÚjÓra.Csoportok[0] != óra.Csoportok[0] ? "\nCsoport: " + helyettesítésInnen.ÚjÓra.Csoportok.Aggregate((a, b) => a + ", " + b) : "")
-                        : "Az óra elmarad")
+                        : helyettesítésIde != null && (helyettesítésIde.EredetiNap != helyettesítésIde.ÚjNap || helyettesítésIde.EredetiSorszám != helyettesítésIde.ÚjSorszám)
+                        ? "" : "Az óra elmarad") //Ha át lett helyezve ide másik óra, akkor nem kell kiírni, hogy elmarad ez az óra
             + (helyettesítésIde == null ? ""
                 : helyettesítésIde.EredetiNap != helyettesítésIde.ÚjNap || helyettesítésIde.EredetiSorszám != helyettesítésIde.ÚjSorszám
                 ? "Áthelyezve: " + Napok[(int)helyettesítésIde.EredetiNap - 1] + " " + helyettesítésIde.EredetiSorszám + ". óra --> ide"
@@ -298,7 +299,7 @@ namespace OrarendAndroidApp
                     + (helyettesítésIde.ÚjÓra.Csoportok[0] != óra?.Csoportok[0] ? "\nCsoport: " + helyettesítésIde.ÚjÓra.Csoportok.Aggregate((a, b) => a + ", " + b) : "") //ˇˇ De ha változott, akkor nem
                     : "") //Ha a pozicíó nem változott, a fentebbi rész már kiírta az adatait
             ;
-            hely.Visibility = ViewStates.Visible;
+            hely.Visibility = hely.Text.Length > 0 ? ViewStates.Visible : ViewStates.Gone;
         }
 
         private void ÓraContextMenuCreated(object sender, View.CreateContextMenuEventArgs e)
@@ -469,7 +470,7 @@ namespace OrarendAndroidApp
                 Recreate();
             }
         }
-        
+
         public override void OnWindowFocusChanged(bool hasFocus)
         {
             base.OnWindowFocusChanged(hasFocus);
