@@ -188,7 +188,7 @@ namespace OrarendAndroidApp
                 bool notnull = false;
                 for (int i = 0; i < 6; i++)
                 { //Kihagyja az üres sorokat
-                    if (API.Órarend.Órák[i][j] != null) //TODO: Helyettesítéseket is figyelje
+                    if (API.Órarend.Órák[i][j] != null && API.HelyettesítésInnenIde(API.Órarend, i, j).Item2 != null)
                     {
                         notnull = true;
                         break;
